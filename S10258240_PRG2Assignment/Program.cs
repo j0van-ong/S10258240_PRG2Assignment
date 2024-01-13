@@ -17,6 +17,7 @@ int DisplayMenu()
     while (true)
     { 
     int option = 0; //initialise
+    //store the menu options for referencing in a list
     string[] menuArray = { "List all customers", "List all current orders", "Register a new customer", "Create a customer's order", 
         "Display order details of a customer", "Modify order details" };
     for (int i = 0; i < menuArray.Length; i++)
@@ -43,6 +44,8 @@ int DisplayMenu()
     return option; //this automatically breaks the loop
     }
 }
+
+//This method creates Customer from the datafile "customer.csv" and save it to a list for future reference
 
 //This method creates Flavour Dictionary to store the Flavours available, setting quanttiy to default 0 for references later
 Dictionary<string, Flavour> InitFlavourDict()
