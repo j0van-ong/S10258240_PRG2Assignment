@@ -53,16 +53,23 @@ Dictionary<string, Flavour> InitFlavourDict()
     Dictionary<string, Flavour> flavourDict = new Dictionary<string, Flavour>();
     for (int i = 0; i<= regularArray.Length; i++)
     {
-        string r = regularArray[i];
-        flavourDict.Add(r, new Flavour(r, false, 0)); 
+        string regular = regularArray[i];
+        flavourDict.Add(regular, new Flavour(regular, false, 0)); 
     }
     for (int i = 0; i<= premiumArray.Length; i++)
     {
-
+        string premium = premiumArray[i];
+        flavourDict.Add(premium, new Flavour(premium, true, 0));
     }
+    return flavourDict;
 }
 
-//Start of program
+
+//******************Start of program*********************
+
+//Initialise FlavourDict for reference as collection
+Dictionary<string, Flavour> flavourDict = InitFlavourDict();
+
 while (true)
 {
     int option = DisplayMenu();
