@@ -41,7 +41,7 @@ namespace S10258240_PRG2Assignment
             }
 
             //Checking for premium flavours
-            double premiumScoops = 2;
+            double premiumScoops = 2; //price
             foreach(Flavour f in Flavours)
             {
                 if (f.Premium)
@@ -51,7 +51,8 @@ namespace S10258240_PRG2Assignment
             }
 
             //Adding cost of toppings
-            cost += (Toppings.Count * 1);
+            int toppingsPrice = 1;
+            cost += (Toppings.Count * toppingsPrice);
             return cost;
         }
 

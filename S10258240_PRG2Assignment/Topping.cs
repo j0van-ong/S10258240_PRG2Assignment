@@ -37,7 +37,7 @@ namespace S10258240_PRG2Assignment
                 }
                 if (!correctOpt)
                 {
-                    throw new Exception($"Incorrect toppings: {value} , check spelling or try again");
+                    throw new Exception($"Incorrect topping: {value} , check spelling or try again");
                 }
                 type = value; 
 			}

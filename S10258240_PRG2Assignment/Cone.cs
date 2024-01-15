@@ -69,7 +69,8 @@ namespace S10258240_PRG2Assignment
             }
 
             //Adding cost of toppings
-            cost += (Toppings.Count * 1);
+            int toppingsPrice = 1;
+            cost += (Toppings.Count * toppingsPrice);
             return cost;
         }
 
