@@ -38,7 +38,7 @@ namespace S10258240_PRG2Assignment
 			get { return quantity; }
             set
             {
-                if (value <= 3)
+                if (value <= 3) //Maximum scoop is 3
                 {
                     quantity = value;
                 }

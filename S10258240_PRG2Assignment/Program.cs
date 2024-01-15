@@ -45,37 +45,41 @@ int DisplayMenu()
     }
 }
 
-//This method creates Customer from the datafile "customer.csv" and save it to a list for future reference
 
-//This method creates Flavour Dictionary to store the Flavours available, setting quanttiy to default 0 for references later
+//This method creates Flavour Dictionary to store the Flavours available, setting quanttiy to default 0 and returns the Dictionary
 Dictionary<string, Flavour> InitFlavourDict()
 {
-    //Array for storing the available flavours
-    string[] regularArray = { "vanilla", "chocolate", "strawberry" }; //premium bool No
-    string[] premiumArray = { "durian", "ube", "sea salt" }; //premium bool Yes
-    Dictionary<string, Flavour> flavourDict = new Dictionary<string, Flavour>();
-    for (int i = 0; i<= regularArray.Length; i++)
+    string premiumPrice = "2";
+    Dictionary<string, Flavour> flavourDict = new Dictionary<string, Flavour>(); //Create New Dict
+    using (StreamReader sr = new StreamReader("flavours.csv"))
     {
-        string regular = regularArray[i];
-        flavourDict.Add(regular, new Flavour(regular, false, 0)); 
-    }
-    for (int i = 0; i<= premiumArray.Length; i++)
-    {
-        string premium = premiumArray[i];
-        flavourDict.Add(premium, new Flavour(premium, true, 0));
-    }
-    return flavourDict;
+        string? s = sr.ReadLine(); //header skip
+        while ((s = sr.ReadLine()) != null)
+        {
+            string[] data = s.Split(",");
+            string flavour = data[0].ToLower(); //standardize lower
+            if (data[1] == premiumPrice)
+            {
+                flavourDict.Add(flavour, new Flavour(flavour, true, 0)); //set default quantity to 0
+            }
+            else //if not is 0 cost
+            {
+                flavourDict.Add(flavour, new Flavour(flavour, false, 0));
+            }
+        }
+        return flavourDict;
+    }    
 }
 
 
-//******************Start of program*********************
+/******************Start of program*********************/
 
-//Initialise FlavourDict for reference as collection
+//Call to initialise FlavourDict for reference as collection
 Dictionary<string, Flavour> flavourDict = InitFlavourDict();
 
 while (true)
 {
-    int option = DisplayMenu();
+    int option = DisplayMenu(); //call the menu, and get back the int option
     if (option == 0)
     {
         break; //ends the program for input 0
