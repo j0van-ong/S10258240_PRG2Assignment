@@ -57,7 +57,7 @@ Dictionary<string, Flavour> InitFlavourDict()
         while ((s = sr.ReadLine()) != null)
         {
             string[] data = s.Split(",");
-            string flavour = data[0].ToLower(); //standardize lower
+            string flavour = data[0].ToLower(); //standardize lower for comparison
             if (data[1] == premiumPrice)
             {
                 flavourDict.Add(flavour, new Flavour(flavour, true, 0)); //set default quantity to 0
