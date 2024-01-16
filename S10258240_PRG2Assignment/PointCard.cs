@@ -5,6 +5,13 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
 
+//==========================================================
+// Student Number : S10255784
+// Student Name :  Lucas Yeo
+// Partner Name : Jovan Ong Yi Jie
+// Partner Number : S10258240
+//==========================================================
+
 namespace S10258240_PRG2Assignment
 {
     class PointCard

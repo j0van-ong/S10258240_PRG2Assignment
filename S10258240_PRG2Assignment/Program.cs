@@ -17,6 +17,8 @@ int DisplayMenu()
     while (true)
     { 
     int option = 0; //initialise
+    Console.WriteLine(); //skip line
+    Console.WriteLine("---------------MENU---------------");
     //store the menu options for referencing in a list
     string[] menuArray = { "List all customers", "List all current orders", "Register a new customer", "Create a customer's order", 
         "Display order details of a customer", "Modify order details" };
@@ -62,8 +64,8 @@ Dictionary<int, Customer> InitCustomer()
             int mPoint = Convert.ToInt32(data[4]);
             int punchPoint = Convert.ToInt32(data[5]);
             Customer c1 = new Customer(data[0], memberID, DOB);
-            c1.rewards = new PointCard(mPoint, punchPoint);
-            c1.rewards.Tier = data[3];
+            c1.Rewards = new PointCard(mPoint, punchPoint);
+            c1.Rewards.Tier = data[3];
             customerDict.Add(memberID, c1);
         }
         return customerDict;
@@ -116,7 +118,7 @@ Dictionary<string, Topping> InitToppingDict()
 //This method list all the customer information from the customerDict, Option 1
 void ListAllCustomer(Dictionary<int, Customer> cList)
 {
-    Console.WriteLine($"{"Name",-15}{"MemberID",-10}{"DOB",-15}{"Membership Tier",-20}{"Memebership Pts",-20}{"Punchcard Pts",-15}");
+    Console.WriteLine($"{"Name",-15}{"MemberID",-15}{"DOB",-15}{"Membership Tier",-20}{"Memebership Pts",-20}{"Punchcard Pts",-15}");
     foreach(Customer c in cList.Values)
     {
         Console.WriteLine(c.ToString());
@@ -124,7 +126,80 @@ void ListAllCustomer(Dictionary<int, Customer> cList)
     Console.WriteLine(); //skip line
 }
 
+//This method registers a new customer via prompt, which then append to customer.csv and as well as to customerDict;
+void RegisterNewCustomer(Dictionary<int, Customer> cList)
+{
+    while (true)
+    {
+        //Initialisation of data for it to access in this method
+        string name;
+        int id;
+        string tempID;
+        DateTime dob;
+        Customer cus1;
+        try
+        {
+            Console.WriteLine("\nREGISTER NEW CUSTOMER, TYPE 0 AT NAME TO EXIT");
+            Console.Write("\nEnter your name: ");
+            name = Console.ReadLine();
+
+            if (name == "0") { break; } //end this method
+
+            Console.Write("Enter your MemberID (6 digit integer): ");
+            tempID = Console.ReadLine();
+            if (tempID.Length == 6) //temp a string to check for length, which is 6 
+            {
+                id = Convert.ToInt32(tempID);
+                if (!cList.ContainsKey(id)) //does not contain inside Dict, so is valid
+                {
+                    Console.Write("Enter your Date of Birth in this format (yyyy/MM/dd): ");
+                    dob = Convert.ToDateTime(Console.ReadLine());
+                    cus1 = new Customer(name, id, dob);
+                    cus1.Rewards = new PointCard(0, 0);
+                    cus1.Rewards.Tier = "Ordinary";
+                }
+                else
+                {
+                    Console.WriteLine("No duplicate User, MemberID already exists in our system, try a different one");
+                    continue;
+                }
+            }
+            else
+            {
+                Console.WriteLine("Incorrect input of MemberID, must be 6 Digit Integer");
+                continue;
+            }
+        }
+        catch (FormatException ex) //any invalid input not specified will result in code to come here
+        {
+            Console.WriteLine(ex.Message);
+            continue;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            continue;
+        }
+        //Code proceeds after validation above
+        cList.Add(id, cus1); //add to dictionary
+        string data = name + "," + id.ToString() + "," + dob.ToString("dd/MM/yyyy") + "," + cus1.Rewards.Tier + "," + "0" + "," + "0"; //append as string with comma
+        try
+        {
+            File.AppendAllText("customers.csv", data);
+            Console.WriteLine("Registration completed!");
+            break; //end method
+        }
+        catch (Exception ex) 
+        {
+            Console.WriteLine($"Error in uploading: " + ex.Message); //if file not found
+            Console.WriteLine("Retrying...");
+            continue;
+        }
+    }
+}
+
 /******************Start of program*********************/
+
 //Call to initialise CustomerDict for reference as collection
 Dictionary<int, Customer> customerDict = InitCustomer();
 
@@ -151,7 +226,7 @@ while (true)
     }
     else if (option == 3)
     {
-
+        RegisterNewCustomer(customerDict);
     }
 
 }

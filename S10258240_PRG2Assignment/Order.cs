@@ -47,13 +47,14 @@ namespace S10258240_PRG2Assignment
         {
             if (icecreamchoice >= 0 && icecreamchoice < iceCreamList.Count)
             {
-                Console.WriteLine("You have chosen: "+iceCreamList[icecreamchoice]);
+                Console.WriteLine("You have chosen: "+ iceCreamList[icecreamchoice]);
                 Console.Write("Enter new ice cream option: ");
                 iceCreamList[icecreamchoice].Option = Console.ReadLine();
                 Console.Write("Enter your new scoops: ");
                 iceCreamList[icecreamchoice].Scoops = Convert.ToInt32(Console.ReadLine());
                 modifyFlavour();
                 modifyToppings();
+
                 void modifyFlavour()
                 {
                     if (iceCreamList[icecreamchoice].Flavours.Count < 3)
@@ -81,7 +82,7 @@ namespace S10258240_PRG2Assignment
                     } 
 
                 }
-                void modifyToppings()
+                void modifyToppings() //
                 {
                     if (iceCreamList[icecreamchoice].Toppings.Count < 4)
                     {
