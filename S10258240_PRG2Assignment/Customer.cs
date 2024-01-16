@@ -24,18 +24,18 @@ namespace S10258240_PRG2Assignment
             MemberId = id;
             DOB =dob;
         }
-        public void IsBirthday()
+        public bool IsBirthday()
         {
             var date = DateTime.Now.Date;
             var birthday = DOB.Date;
-            if (date == birthday)
+            if (date.Month == birthday.Month && date.Day == birthday.Day)
             {
                 Console.WriteLine("Birthday");
+                return true;
             }
-            else
-            {
-                Console.WriteLine("NOt birthday");
-            }
+            Console.WriteLine("NOt birthday");
+            return false;
+            
         }
         public override string ToString()
         {

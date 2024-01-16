@@ -45,8 +45,32 @@ int DisplayMenu()
     }
 }
 
+/*This method reads from the "customer.csv" file and creates a Dictionary to store their Info, and returns the Dictionary
+ * MemberID will be the key*/
+Dictionary<int, Customer> InitCustomer()
+{
+    Dictionary<int, Customer> customerDict = new Dictionary<int, Customer>(); //Create new Dict
+    using (StreamReader sr = new StreamReader("customer.csv"))
+    {
+        string? s = sr.ReadLine(); //header skip
+        while ((s = sr.ReadLine()) != null)
+        {
+            string[] data = s.Split(",");
+            int memberID = Convert.ToInt32(data[1]);
+            DateTime DOB = Convert.ToDateTime(data[2]);
+            int mPoint = Convert.ToInt32(data[4]);
+            int punchPoint = Convert.ToInt32(data[5]);
+            Customer c1 = new Customer(data[0], memberID, DOB);
+            c1.rewards = new PointCard(mPoint, punchPoint);
+            c1.rewards.Tier = data[3];
+            customerDict.Add(memberID, c1);
+        }
+        return customerDict;
+    }
+}
 
-//This method creates Flavour Dictionary to store the Flavours available, setting quanttiy to default 0 and returns the Dictionary
+/*This method reads from "flavour.csv" creates Flavour Dictionary to store the Flavours available, with the flavour name the key and
+ * setting quanttiy to default 0 and returns the Dictionary*/
 Dictionary<string, Flavour> InitFlavourDict()
 {
     string premiumPrice = "2";
@@ -71,7 +95,7 @@ Dictionary<string, Flavour> InitFlavourDict()
     }    
 }
 
-//This method creates Toppings Dictionary to store the Toppings available, and returns it.
+//This method reads from "topping.csv" and creates Toppings Dictionary to store the Toppings available(Flavour name as key), and returns Dicitonary.
 Dictionary<string, Topping> InitToppingDict()
 {
     Dictionary<string, Topping> toppingDict = new Dictionary<string, Topping>(); //Create New Dict

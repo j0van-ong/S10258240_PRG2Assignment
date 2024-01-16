@@ -19,7 +19,7 @@ namespace S10258240_PRG2Assignment
         public PointCard(int points,int punchCard)
         {
             Points = points;
-            Points = punchCard;
+            PunchCard = punchCard;
         }
         void AddPoints(int addedpoints)
         {
@@ -27,7 +27,7 @@ namespace S10258240_PRG2Assignment
         }
         void RedeemPoints(int points)
         {
-            if (tier == "Gold"||tier == "Silver")
+            if (Tier == "Gold"||Tier == "Silver")
             {
                 Points -= points;
             }
@@ -39,19 +39,19 @@ namespace S10258240_PRG2Assignment
             void Punch()
         {
             int FinalPrice;
-            if (punchCard == 10)
+            if (PunchCard == 10)
             {
-                punchCard = 0;
+                PunchCard = 0;
                 FinalPrice = 0;
             }
             else
             {
-                punchCard += 1;
+                PunchCard += 1;
             }
         }
         public override string ToString()
         {
-            return " Points: " + Points + " PunchCard " + punchCard;
+            return " Points: " + Points + " PunchCard " + PunchCard;
         }
     }
     
