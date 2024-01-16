@@ -8,10 +8,10 @@
 //==========================================================
 
 
-/*This function displays the menu for the overall application and returns a integer, 
- *the option for the application */
 using S10258240_PRG2Assignment;
 
+/*This function displays the menu for the overall application and returns a integer, 
+ *the option for the application */
 int DisplayMenu()
 {
     while (true)
@@ -71,11 +71,31 @@ Dictionary<string, Flavour> InitFlavourDict()
     }    
 }
 
+//This method creates Toppings Dictionary to store the Toppings available, and returns it.
+Dictionary<string, Topping> InitToppingDict()
+{
+    Dictionary<string, Topping> toppingDict = new Dictionary<string, Topping>(); //Create New Dict
+    using (StreamReader sr = new StreamReader("flavours.csv"))
+    {
+        string? s = sr.ReadLine(); //header skip
+        while ((s = sr.ReadLine()) != null)
+        {
+            string[] data = s.Split(",");
+            string topping = data[0].ToLower();
+            toppingDict.Add(topping, new Topping(topping));
+        }
+        return toppingDict;
+    }
+}
 
 /******************Start of program*********************/
 
 //Call to initialise FlavourDict for reference as collection
 Dictionary<string, Flavour> flavourDict = InitFlavourDict();
+
+//Call to initialise ToppingDict for reference as collection
+Dictionary<string, Topping> toppingDict = InitToppingDict();
+
 
 while (true)
 {

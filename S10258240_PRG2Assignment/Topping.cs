@@ -21,26 +21,7 @@ namespace S10258240_PRG2Assignment
 		public string Type
 		{
 			get { return type; }
-			set 
-			{
-				value = value.ToLower();
-                bool correctOpt = false;
-                string[] toppingArray = { "sprinkles", "mochi", "sago", "oreos" };
-                for (int i = 0; i < toppingArray.Length; i++)
-                {
-                    if (value == toppingArray[i])
-                    {
-                        correctOpt = true;
-                        type = value;
-                        break;
-                    }
-                }
-                if (!correctOpt)
-                {
-                    throw new Exception($"Incorrect topping: {value} , check spelling or try again");
-                }
-                type = value; 
-			}
+			set { type = value; }
 		}
 
 		//Constructors
