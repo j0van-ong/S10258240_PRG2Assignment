@@ -39,11 +39,9 @@ namespace S10258240_PRG2Assignment
         }
         public override string ToString()
         {
-            foreach (Order order in orderHistory)
-            {
-                return order.ToString();
-            }
-            return "Name: " + Name + " MemberID: " + MemberId + " Date of Birth: " + Convert.ToString(DOB);
+            return $"{Name,-15}{MemberId,-10}{DOB.ToString("dd/MM/yyyy"),-15}{rewards.Tier,-20}{rewards.Points,-20}{rewards.PunchCard,-15}";
+
+            //"Name: " + Name + " MemberID: " + MemberId + " Date of Birth: " + Convert.ToString(DOB);
         }
 
 

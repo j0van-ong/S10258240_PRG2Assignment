@@ -30,6 +30,7 @@ int DisplayMenu()
     {
         Console.Write("\nEnter option: ");
         option = Convert.ToInt32(Console.ReadLine());
+        Console.WriteLine(); //skip a line
         if (option > menuArray.Length || option < 0) //checking for the range of num
         {
             Console.WriteLine("Please enter a number in range");
@@ -50,7 +51,7 @@ int DisplayMenu()
 Dictionary<int, Customer> InitCustomer()
 {
     Dictionary<int, Customer> customerDict = new Dictionary<int, Customer>(); //Create new Dict
-    using (StreamReader sr = new StreamReader("customer.csv"))
+    using (StreamReader sr = new StreamReader("customers.csv"))
     {
         string? s = sr.ReadLine(); //header skip
         while ((s = sr.ReadLine()) != null)
@@ -112,14 +113,26 @@ Dictionary<string, Topping> InitToppingDict()
     }
 }
 
+//This method list all the customer information from the customerDict, Option 1
+void ListAllCustomer(Dictionary<int, Customer> cList)
+{
+    Console.WriteLine($"{"Name",-15}{"MemberID",-10}{"DOB",-15}{"Membership Tier",-20}{"Memebership Pts",-20}{"Punchcard Pts",-15}");
+    foreach(Customer c in cList.Values)
+    {
+        Console.WriteLine(c.ToString());
+    }
+    Console.WriteLine(); //skip line
+}
+
 /******************Start of program*********************/
+//Call to initialise CustomerDict for reference as collection
+Dictionary<int, Customer> customerDict = InitCustomer();
 
 //Call to initialise FlavourDict for reference as collection
 Dictionary<string, Flavour> flavourDict = InitFlavourDict();
 
 //Call to initialise ToppingDict for reference as collection
 Dictionary<string, Topping> toppingDict = InitToppingDict();
-
 
 while (true)
 {
@@ -130,10 +143,15 @@ while (true)
     }
     else if (option == 1)
     {
-
+        ListAllCustomer(customerDict); //call method
     }
     else if (option == 2)
     {
 
     }
+    else if (option == 3)
+    {
+
+    }
+
 }
