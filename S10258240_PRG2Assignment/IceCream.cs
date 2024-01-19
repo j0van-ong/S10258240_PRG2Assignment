@@ -20,48 +20,19 @@ namespace S10258240_PRG2Assignment
 		public string Option
 		{
 			get { return option; }
-			set 
-			{
-				value = value.ToLower();
-				bool correctOpt = false;
-				string[] optionArray = { "cup", "cone", "waffle" };
-				for (int i = 0; i < optionArray.Length; i++)
-				{
-					if (value == optionArray[i])
-					{
-                        option = value;
-						correctOpt = true;
-						break;
-                    }
-				}
-				if (!correctOpt)
-				{
-					throw new Exception($"Invalid option: {value} , try again");
-				}
-				
-			}
+			set { option = value; }
 		}
 
 		private int scoops;
 		public int Scoops
 		{
 			get { return scoops; }
-			set 
-			{
-				if (value <= 3)
-				{
-                    scoops = value;
-                }
-				else
-				{
-					throw new Exception("Please select between 1-3 scoops");
-				}
-            }
+			set { scoops = value; }
 		}
 
 		private List<Flavour> flavours;
-		public List<Flavour> Flavours
-		{
+		public List<Flavour> Flavours 
+		{ 
 			get { return flavours; }
 			set { flavours = value; }
 		}
@@ -74,7 +45,11 @@ namespace S10258240_PRG2Assignment
 		}
 
 		//Constructors
-		public IceCream() { }
+		public IceCream() 
+		{
+			Flavours = new List<Flavour>();
+			Toppings = new List<Topping>();
+		}
 		public IceCream(string o, int s, List<Flavour> fList, List<Topping> tList )
 		{
 			Option = o;
@@ -89,10 +64,11 @@ namespace S10258240_PRG2Assignment
         public override string ToString()
         {
 			string information = $"Option: {Option}   Scoops: {Scoops}\n";
+			information += "\nFlavours: ";
 			foreach ( Flavour f in Flavours )
 			{
-				
-				information += "Flavours: \n" + f.ToString();
+
+				information += "\n" + f.ToString();
 			}
 			if (Toppings.Count != 0)
 			{
@@ -102,7 +78,7 @@ namespace S10258240_PRG2Assignment
                 }
             }
 			else 
-			{ information += "Toppings: NIL"; }
+			{ information += "\nType of Topping: NIL"; }
 
 			return information;
         }

@@ -34,7 +34,7 @@ namespace S10258240_PRG2Assignment
         //Method
         public override string ToString()
         {
-			return $"Type of Topping(s): {Type}";
+			return $"\nType of Topping(s): {Type}";
         }
     }
 }

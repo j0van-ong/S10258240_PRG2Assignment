@@ -76,7 +76,7 @@ namespace S10258240_PRG2Assignment
 
         public override string ToString()
         {
-            return base.ToString() + $"Chocolate-Dipped Cone: {Dipped}\nCost: {CalculatePrice()}";
+            return base.ToString() + $"Chocolate-Dipped Cone: {Dipped}\nCost: ${CalculatePrice():0.00}";
         }
 
     }

@@ -58,7 +58,7 @@ namespace S10258240_PRG2Assignment
 
         public override string ToString()
         {
-            return base.ToString() + $"\nCost: ${CalculatePrice()}";
+            return base.ToString() + $"\nCost: ${CalculatePrice():0.00}";
         }
 
     }

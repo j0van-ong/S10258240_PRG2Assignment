@@ -19,15 +19,15 @@ namespace S10258240_PRG2Assignment
     {
         private int id;
         public int Id { get; set; }
-        public DateTime timeReceived { get;set; }
-        public DateTime timeFulfilled { get; set; }
+        public DateTime TimeReceived { get;set; }
+        public DateTime TimeFulfilled { get; set; }
         public List<IceCream>iceCreamList { get; set; } = new List<IceCream>();
 
         public Order() { }
         public Order(int id, DateTime r)
         {
             Id = id;
-            timeReceived = r;
+            TimeReceived = r;
         }
         public void AddIceCream(IceCream iceCream)
         {
@@ -112,10 +112,9 @@ namespace S10258240_PRG2Assignment
             string information = "";
             foreach (IceCream icecream in iceCreamList)
             {
-                information += "Ice Cream: \n" + icecream.ToString();
-                return information;
+                information += "\nIce Cream Order: \n" + icecream.ToString();
             }
-            return "Id: " + Id + "Time received order: " + Convert.ToString(timeReceived);
+            return information + "\nId: " + Id + "\nTime received order: " + Convert.ToString(TimeReceived);
 
 
         }

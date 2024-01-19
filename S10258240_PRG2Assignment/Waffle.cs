@@ -18,29 +18,10 @@ namespace S10258240_PRG2Assignment
 		//Attributes
 		private string waffleFlavour;
 		public string WaffleFlavour
-		{
-			get { return waffleFlavour; }
-			set 
-			{
-				value = value.ToLower(); //to default lower
-				bool correctOpt = false;
-				string[] wFlavourList = { "red velvet", "charcoal", "pandan", "original" };
-				for (int i = 0; i < wFlavourList.Length; i++)
-				{
-					if (value == wFlavourList[i])
-					{
-                        correctOpt = true;
-                        waffleFlavour = value;
-                        break;
-                    }
-                }
-                if (!correctOpt)
-                {
-                    throw new Exception($"Incorrect flavour: {value}, check spelling or try again");
-                }
-            }
-	
-		}
+        {
+            get { return waffleFlavour; }
+            set { waffleFlavour = value; }
+        }
 
 		//Constructor
 		public Waffle():base() { }
@@ -92,7 +73,7 @@ namespace S10258240_PRG2Assignment
         }
         public override string ToString()
         {
-            return base.ToString() + $"\nWaffle Flavour: {waffleFlavour}\nCost: {CalculatePrice()}";
+            return base.ToString() + $"\nWaffle Flavour: {waffleFlavour}\nCost: ${CalculatePrice():0.00}";
         }
 
 
