@@ -245,6 +245,7 @@ void RegisterNewCustomer(Dictionary<int, Customer> cList)
         //Code proceeds after validation above
         cList.Add(id, cus1); //add to dictionary
         Console.WriteLine("Registration completed!");
+        break;
     }
 }
 
@@ -256,7 +257,7 @@ void CreateCustomerOrder(Dictionary<int, Customer> cList, List<IceCream> icecrea
         //Initialisation of data for it to access in this method
         try
         {
-            int id;
+            int id = 0; //dummy value
             Console.WriteLine("\nCREATE NEW CUSTOMER'S ORDER, TYPE 0 AT MEMBERID TO EXIT");
             Console.Write("\nEnter MemberID to continue: ");
             string tempID = Console.ReadLine();
@@ -264,12 +265,28 @@ void CreateCustomerOrder(Dictionary<int, Customer> cList, List<IceCream> icecrea
 
             if (tempID.Length == 6) //temp a string to check for length, which is 6 
             {
-                id = Convert.ToInt32(tempID);
+                try
+                {
+                    id = Convert.ToInt32(tempID);
+                }
+                catch (FormatException)
+                {
+                    Console.WriteLine("Must be integer.");
+                    continue;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                    continue;
+                }
+                //rest of the program
                 if (cList.ContainsKey(id)) //contain inside Dict, so is valid
                 {
-                    Order newOrder = new Order(); //creates order object
-                    IceCream icecreamOrder = TakingOrders(icecreamOption, fList, tList);
-                    newOrder.AddIceCream(icecreamOrder);
+                    IceCream icecreamOrder = TakingOrders(icecreamOption, fList, tList); //method for creating ice cream process
+                    Customer cus = cList[id]; //get its dictionary value, which is the customer object
+                    Order newOrder = cus.MakeOrder(); //creation of new order tailored to the customer
+                    newOrder.AddIceCream(icecreamOrder); 
+
                     while (true) //this loops checks for continue of order
                     {
                         Console.WriteLine("\n[Y] Would you like to add on more Ice Cream? \n[N] No, Next Step");
@@ -279,16 +296,14 @@ void CreateCustomerOrder(Dictionary<int, Customer> cList, List<IceCream> icecrea
                         {
                             if (response == "Y")
                             {
-                                IceCream icecreamOrder2 = TakingOrders(icecreamOption, fList, tList);
+                                IceCream icecreamOrder2 = TakingOrders(icecreamOption, fList, tList); //continues creating making of icecream
                                 newOrder.AddIceCream(icecreamOrder2);
                             }
                             else { Console.WriteLine("Incorrect input, only Y or N");  }
                         }
                         else { break; }
                     }
-                    newOrder.TimeReceived = DateTime.Now;
-                    Customer cus = cList[id]; //get its dictionary value, which is the class
-                    cus.currentOrder = newOrder;
+                    
                     string qType; //for use in displaying queue type
                     if (cus.Rewards.Tier == "Gold")
                     {
@@ -306,7 +321,7 @@ void CreateCustomerOrder(Dictionary<int, Customer> cList, List<IceCream> icecrea
                     Console.WriteLine($"Order Successful. Your OrderID is {newOrder.Id} in the {qType} Queue");
                     break; //end the method
                 }
-                else //if it is not a key in the CustomerDict
+                else //if it is not a key in the CustomerDict, invalid input
                 {
                     throw new Exception("MemberID does not exist, try again. If new user, please proceed to [3] to register");
                 }

@@ -31,6 +31,14 @@ namespace S10258240_PRG2Assignment
             MemberId = id;
             DOB =dob;
         }
+
+        public Order MakeOrder()
+        {
+            Order order = new Order();
+            order.TimeReceived = DateTime.Now;
+            return order;
+
+        }
         public bool IsBirthday()
         {
             var date = DateTime.Now.Date;
