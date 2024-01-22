@@ -10,6 +10,7 @@
 
 using S10258240_PRG2Assignment;
 using System;
+using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Xml.Linq;
 
@@ -243,19 +244,7 @@ void RegisterNewCustomer(Dictionary<int, Customer> cList)
         }
         //Code proceeds after validation above
         cList.Add(id, cus1); //add to dictionary
-        string data = name + "," + id.ToString() + "," + dob.ToString("dd/MM/yyyy") + "," + cus1.Rewards.Tier + "," + "0" + "," + "0"; //append as string with comma
-        try
-        {
-            File.AppendAllText("customers.csv", data);
-            Console.WriteLine("Registration completed!");
-            break; //end method
-        }
-        catch (Exception ex) 
-        {
-            Console.WriteLine($"Error in uploading: " + ex.Message); //if file not found
-            Console.WriteLine("Retrying...");
-            continue;
-        }
+        Console.WriteLine("Registration completed!");
     }
 }
 
@@ -319,7 +308,7 @@ void CreateCustomerOrder(Dictionary<int, Customer> cList, List<IceCream> icecrea
                 }
                 else //if it is not a key in the CustomerDict
                 {
-                    throw new Exception("MemberID does not exist, try again");
+                    throw new Exception("MemberID does not exist, try again. If new user, please proceed to [3] to register");
                 }
             }
             else
@@ -513,6 +502,20 @@ IceCream GetTopping(IceCream iceCream, Dictionary<string, Topping> tList)
     return iceCream;
 
 }
+
+//This method UPDATES THE CSV FILE, before closing the application when 0 is click, to keep the information updated
+void UpdateCSVData(Dictionary<int, Customer> cList)
+{
+    //Start off with CustomerDict, 'rewriting' into customer.csv
+    string header = "Name,MemberId,DOB,MembershipStatus,MembershipPoints,PunchCard\n";
+    File.WriteAllText("customers.csv", header); //This Write 'erases' everything from the exisiting file, restarting
+    foreach (KeyValuePair<int, Customer> kvp in cList) //loop through whole list
+    {
+        Customer currentCus = kvp.Value;
+        string data = currentCus.Name + "," + currentCus.MemberId.ToString() + "," + currentCus.DOB.ToString("dd/MM/yyyy") + "," + currentCus.Rewards.Tier + "," + currentCus.Rewards.Points + "," + currentCus.Rewards.PunchCard + "\n"; //append as string with comma
+        File.AppendAllText("customers.csv", data); //no longer need to rewrite, to append
+    }
+}
 /******************Start of program*********************/
 
 //Call to initialise CustomerDict for reference as collection
@@ -536,6 +539,7 @@ while (true)
     int option = DisplayMenu(); //call the menu, and get back the int option
     if (option == 0)
     {
+        UpdateCSVData(customerDict);
         break; //ends the program for input 0
     }
     else if (option == 1)
