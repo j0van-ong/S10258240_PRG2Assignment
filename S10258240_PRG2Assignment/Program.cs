@@ -12,6 +12,7 @@ using S10258240_PRG2Assignment;
 using System;
 using System.Globalization;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Xml.Linq;
 
 /*This function displays the menu for the overall application and returns a integer, 
@@ -25,7 +26,7 @@ int DisplayMenu()
     Console.WriteLine("---------------MENU---------------");
     //store the menu options for referencing in a list
     string[] menuArray = { "List all customers", "List all current orders", "Register a new customer", "Create a customer's order", 
-        "Display order details of a customer", "Modify order details" };
+        "Display order details of a customer", "Modify order details", "Process an order and checkout", "Display monthly and yearly charged amounts" };
     for (int i = 0; i < menuArray.Length; i++)
     {
         Console.WriteLine($"[{i + 1}] {menuArray[i]}");
@@ -127,6 +128,102 @@ List<IceCream> InitOptionList()
     return icecreamOption;
     }
 }
+
+//This methods initialise the "orders.csv" and makes order corresponding to each customer, then appending to queue. It returns the largest num order id for use later
+int InitOrder(Queue<Order> RegularQueue, Queue<Order> GoldQueue, Dictionary<int, Customer> customerDict)
+{
+    int largestId = 0; //dummy value to store
+
+    string[] DataArray = File.ReadAllLines("orders.csv");
+    for (int i = 1; i < DataArray.Length; i++)
+    {
+        List<IceCream> icecreamList = new List<IceCream>(); // Create new ice cream list
+        List<Order> orderHistory = new List<Order>();
+        bool premium = false;
+        string[] data = DataArray[i].Split(",");
+        int id = Convert.ToInt32(data[0]);
+        
+        //Check if current id is more than stored id
+        if (id > largestId)
+        {
+            largestId = id;
+        }
+
+        int memberID = Convert.ToInt32(data[1]);
+        DateTime timeReceived = Convert.ToDateTime(data[2]);
+        DateTime timefulfilled = Convert.ToDateTime(data[3]);
+        string option = data[4];
+        int scoops = Convert.ToInt32(data[5]);
+        Order neworder = new Order(id, timeReceived);
+        List<Flavour> flavourlist = new List<Flavour>();
+        List<Topping> toppingList = new List<Topping>();
+
+        // Populate flavour list
+        for (int j = 8; j <= 10; j++)
+        {
+            bool isInside = false;
+            string flavourData = data[j];
+            if (!string.IsNullOrEmpty(flavourData))
+            {
+                int quantity = 1;
+                if (flavourData == "Durian" || flavourData == "Ube" || flavourData == "Sea Salt")
+                {
+                    premium = true;
+                }
+                Flavour newFlavour = new Flavour(flavourData, premium, quantity);
+                flavourlist.Add(newFlavour);
+            }
+        }
+
+        // Populate topping list
+        for (int j = 11; j <= 13; j++)
+        {
+            string toppingData = data[j];
+            if (!string.IsNullOrEmpty(toppingData))
+            {
+                Topping newTopping = new Topping(toppingData);
+                toppingList.Add(newTopping);
+            }
+        }
+        if (option == "Waffle")
+        {
+            string waffleFlavour = data[7];
+            Waffle waffle = new Waffle(option, scoops, flavourlist, toppingList, waffleFlavour);
+            neworder.iceCreamList.Add(waffle);
+        }
+        else if (option == "Cone")
+        {
+            bool isDipped = Convert.ToBoolean(data[6]);
+            Cone cone = new Cone(option, scoops, flavourlist, toppingList, isDipped);
+            neworder.iceCreamList.Add(cone);
+        }
+        else
+        {
+            Cup cup = new Cup(option, scoops, flavourlist, toppingList);
+            neworder.iceCreamList.Add(cup);
+        }
+        foreach (KeyValuePair<int, Customer> kvp in customerDict)
+        {
+            if (memberID == kvp.Key)
+            {
+                kvp.Value.currentOrder = neworder;
+                if (kvp.Value.Rewards.Tier == "Gold")
+                {
+                    kvp.Value.orderHistory.Add(neworder);
+                    GoldQueue.Enqueue(neworder);
+                }
+                else
+                {
+                    kvp.Value.orderHistory.Add(neworder);
+                    RegularQueue.Enqueue(neworder);
+                }
+
+            }
+        } 
+    }
+    return largestId; 
+}
+
 /*This method reads from "flavour.csv" creates Flavour Dictionary to store the Flavours available, with the flavour name the key and
  * setting quanttiy to default 0 and returns the Dictionary*/
 Dictionary<string, Flavour> InitFlavourDict()
@@ -250,7 +347,7 @@ void RegisterNewCustomer(Dictionary<int, Customer> cList)
 }
 
 //This method registers a new customer's order via prompt, which then creates order object and append to customer order.
-void CreateCustomerOrder(Dictionary<int, Customer> cList, List<IceCream> icecreamOption, Dictionary<string, Flavour> fList, Dictionary<string, Topping> tList, Queue<Order>normalQ, Queue<Order> goldQ )
+int CreateCustomerOrder(Dictionary<int, Customer> cList, List<IceCream> icecreamOption, Dictionary<string, Flavour> fList, Dictionary<string, Topping> tList, Queue<Order>normalQ, Queue<Order> goldQ, int lastId )
 {
     while (true)
     {
@@ -282,8 +379,12 @@ void CreateCustomerOrder(Dictionary<int, Customer> cList, List<IceCream> icecrea
                 //rest of the program
                 if (cList.ContainsKey(id)) //contain inside Dict, so is valid
                 {
-                    IceCream icecreamOrder = TakingOrders(icecreamOption, fList, tList); //method for creating ice cream process
                     Customer cus = cList[id]; //get its dictionary value, which is the customer object
+                    if (cus.currentOrder != null) //check for relationship of customer CurrentOrder, only 0..1 r/s
+                    {
+                        throw new Exception("You have a existing order. Please wait for it to dequeue.");
+                    }
+                    IceCream icecreamOrder = TakingOrders(icecreamOption, fList, tList); //method for creating ice cream process
                     Order newOrder = cus.MakeOrder(); //creation of new order tailored to the customer
                     newOrder.AddIceCream(icecreamOrder); 
 
@@ -304,16 +405,17 @@ void CreateCustomerOrder(Dictionary<int, Customer> cList, List<IceCream> icecrea
                         else { break; }
                     }
                     
+                    cus.currentOrder = newOrder; //Set to current order of object
                     string qType; //for use in displaying queue type
+                    lastId++;//increment + 1
+                    newOrder.Id = lastId;
                     if (cus.Rewards.Tier == "Gold")
                     {
-                        newOrder.Id = goldQ.Count + 1;
                         qType = "Gold";
                         goldQ.Enqueue(newOrder);
                     }
                     else
                     {
-                        newOrder.Id = normalQ.Count + 1;
                         qType = "Normal";
                         normalQ.Enqueue(newOrder);
                     }
@@ -331,6 +433,11 @@ void CreateCustomerOrder(Dictionary<int, Customer> cList, List<IceCream> icecrea
                 throw new Exception("Incorrect input of MemberID, must be 6 Digit Integer");
             }
         }
+        catch (FormatException ex)
+        {
+            Console.WriteLine(ex.Message);
+            continue;
+        }
         catch (Exception ex) 
         {
             Console.WriteLine(ex.Message);
@@ -338,8 +445,9 @@ void CreateCustomerOrder(Dictionary<int, Customer> cList, List<IceCream> icecrea
         }
 
     }
+    return lastId;
 }
-//This method is a sub method for Option 3 CreateOrders, which gets input to create Ice cream object
+//This method is a sub method for Option 4 CreateOrders, which gets input to create Ice cream object
 IceCream TakingOrders(List<IceCream> icecreamOption, Dictionary<string, Flavour>fList, Dictionary<string, Topping> tList)
 {
     //Initialisation of data
@@ -442,6 +550,8 @@ IceCream TakingOrders(List<IceCream> icecreamOption, Dictionary<string, Flavour>
         }
     }
 }
+
+//This methods gets the icecream and adds flavour, and return corresponding edited Ice cream back, sub method of Option 4
 IceCream GetFlavour(int numScoops, IceCream iceCream, Dictionary<string, Flavour> fList)
 {
     int flavourCount = 1; //first loop is counted as one time when first run, hence set to 1
@@ -452,7 +562,7 @@ IceCream GetFlavour(int numScoops, IceCream iceCream, Dictionary<string, Flavour
         Console.Write("\nEnter a flavour: ");
         string flavour = Console.ReadLine().ToLower();
 
-        if (fList.ContainsKey(flavour)) //check if key exist in ToppingDict by user input
+        if (fList.ContainsKey(flavour)) //check if key exist in FlavourDict by user input
         {
             Flavour chkFlavour = fList[flavour]; //gets the corresponding flavour object from dict(value)
             if (!iceCream.Flavours.Contains(chkFlavour)) //NOT(if it alr exist in icecream List)
@@ -483,6 +593,7 @@ IceCream GetFlavour(int numScoops, IceCream iceCream, Dictionary<string, Flavour
     return iceCream; //break
 }
 
+//This methods gets the icecream and adds topping, and return corresponding edited Ice cream back, sub method of Option 4
 IceCream GetTopping(IceCream iceCream, Dictionary<string, Topping> tList)
 {
     int toppingCount = 1; //first loop is counted as one time when first run, hence set to 1
@@ -493,7 +604,7 @@ IceCream GetTopping(IceCream iceCream, Dictionary<string, Topping> tList)
         string topping = Console.ReadLine().ToLower();
         if (topping == "n")
         {
-            return iceCream;
+            return iceCream; //no modification
         }
         if (tList.ContainsKey(topping)) //check if key exist in ToppingDict by user input
         {
@@ -518,6 +629,7 @@ IceCream GetTopping(IceCream iceCream, Dictionary<string, Topping> tList)
 
 }
 
+
 //This method UPDATES THE CSV FILE, before closing the application when 0 is click, to keep the information updated
 void UpdateCSVData(Dictionary<int, Customer> cList)
 {
@@ -531,6 +643,76 @@ void UpdateCSVData(Dictionary<int, Customer> cList)
         File.AppendAllText("customers.csv", data); //no longer need to rewrite, to append
     }
 }
+
+//This method Process an order and checks it out, from the queue status , ADVANCED PART A
+void ProcessAndCheckOut(Queue<Order> queue, Dictionary<int, Customer> cList)
+{
+    //initialisation of data
+    Customer settleCustomer = new Customer();
+    bool isOrderFound = false;
+    string tier;
+    int points;
+    int completePunch = 10;
+
+    Order orderToSettle = queue.Dequeue(); //Gets the first order to work on
+    Console.WriteLine($"Ice Cream Orders: {orderToSettle.ToString()}"); //list the icecream in the order object with tostring
+    double totalcost = orderToSettle.CalculateTotal();
+    Console.WriteLine($"\nTotal Bill: ${totalcost:0.00}");
+
+    //Below checks for which customer the order belongs to
+    foreach (Customer cus in cList.Values)
+    {
+        //test if order made by who
+        if (cus.currentOrder != null && cus.currentOrder.Id == orderToSettle.Id) //similar id num, check if curren order is not null first
+        {
+            settleCustomer = cus; //assign to this customer class for reference
+            int foundID = settleCustomer.MemberId;
+            tier = settleCustomer.Rewards.Tier;
+            points = settleCustomer.Rewards.Points;
+            Console.WriteLine($"Membership Status: {tier}\nPoints: {points}");
+            isOrderFound = true;
+            break;
+        }
+    }
+    if (isOrderFound) //bool value to check for customer found
+    {
+        Console.WriteLine("Cant find the corresponding customer for this order. So sorry.");
+        return; //break 
+    }
+    //Check for its birthday
+    if (settleCustomer.IsBirthday())
+    {
+        double price = 0;
+        double mostexpensive = 0;
+        IceCream freeIC = null;
+        foreach (IceCream ic in orderToSettle.iceCreamList) //check which icecream is free
+        {
+            price = ic.CalculatePrice(); //set price to current icecream
+            if (mostexpensive > price) //if most ex is more, no changes needed
+            {
+                continue;
+            }
+            else
+            {
+                mostexpensive = price; //update most expensive price
+                freeIC = ic; //update to its current icecream obj, free
+            }
+        }
+        totalcost = orderToSettle.CalculateTotal() - mostexpensive; 
+    }
+    //No birthday, then no discount 
+    //Checks for completion of punchcard
+    if (settleCustomer.Rewards.PunchCard == completePunch)
+    {
+        settleCustomer.Rewards.PunchCard = 0; //reset
+        double deductfree = orderToSettle.iceCreamList[0].CalculatePrice();
+        totalcost = totalcost - deductfree;
+    }
+
+
+
+}
+
 /******************Start of program*********************/
 
 //Call to initialise CustomerDict for reference as collection
@@ -548,6 +730,9 @@ Dictionary<string, Topping> toppingDict = InitToppingDict();
 //Creation of Order Queue
 Queue<Order> normalQueue = new Queue<Order>();
 Queue<Order> goldQueue = new Queue<Order>();
+
+//Call to initialise data from "orders.csv", and gets the latest order id 
+int latestId = InitOrder(normalQueue, goldQueue, customerDict);
 
 while (true)
 {
@@ -572,7 +757,25 @@ while (true)
     else if (option == 4)
     {
         ListAllCustomer(customerDict); 
-        CreateCustomerOrder(customerDict, icecreamOption, flavourDict, toppingDict, normalQueue, goldQueue);
+        latestId = CreateCustomerOrder(customerDict, icecreamOption, flavourDict, toppingDict, normalQueue, goldQueue, latestId); //updates latestId too
     }
+    else if (option == 5)
+    {
 
+    }
+    else if (option == 6)
+    {
+
+    }
+    else if (option == 7)
+    {
+        if (goldQueue.Count > 0) //check for any VIP customers to process first
+        {
+            ProcessAndCheckOut(goldQueue, customerDict); //pass in goldqueue first 
+        }
+        else
+        {
+            ProcessAndCheckOut(normalQueue, customerDict); //pass normal queue if no one in golden
+        }
+    }
 }

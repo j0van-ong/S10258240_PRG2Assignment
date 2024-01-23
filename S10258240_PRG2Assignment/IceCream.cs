@@ -63,7 +63,7 @@ namespace S10258240_PRG2Assignment
 
         public override string ToString()
         {
-			string information = $"Option: {Option}   Scoops: {Scoops}\n";
+			string information = $"Option: {Option}\nScoops: {Scoops}\n";
 			information += "\nFlavours: ";
 			foreach ( Flavour f in Flavours )
 			{

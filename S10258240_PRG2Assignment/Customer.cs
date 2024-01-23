@@ -45,10 +45,9 @@ namespace S10258240_PRG2Assignment
             var birthday = DOB.Date;
             if (date.Month == birthday.Month && date.Day == birthday.Day)
             {
-                Console.WriteLine("Birthday");
+                Console.WriteLine("Happy Birthday!");
                 return true;
             }
-            Console.WriteLine("NOt birthday");
             return false;
             
         }

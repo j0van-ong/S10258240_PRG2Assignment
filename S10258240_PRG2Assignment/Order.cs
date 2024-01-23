@@ -38,8 +38,7 @@ namespace S10258240_PRG2Assignment
             double Price = 0;
             foreach (IceCream iceCream in iceCreamList)
             {
-                Price = iceCream.CalculatePrice();
-                Price += Price;
+                Price += iceCream.CalculatePrice();
             }
             return Price;
         }
@@ -112,7 +111,7 @@ namespace S10258240_PRG2Assignment
             string information = "";
             foreach (IceCream icecream in iceCreamList)
             {
-                information += "\nIce Cream Order: \n" + icecream.ToString();
+                information += "\n\n" + icecream.ToString();
             }
             return information + "\nId: " + Id + "\nTime received order: " + Convert.ToString(TimeReceived);
 
