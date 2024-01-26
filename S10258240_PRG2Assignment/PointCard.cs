@@ -28,33 +28,24 @@ namespace S10258240_PRG2Assignment
             Points = points;
             PunchCard = punchCard;
         }
-        void AddPoints(int addedpoints)
+        public void AddPoints(int addedpoints)
         {
             Points += addedpoints;
         }
-        void RedeemPoints(int points)
+        public void RedeemPoints(int pts)
         {
-            if (Tier == "Gold"||Tier == "Silver")
+            if (pts <= Points)
             {
-                Points -= points;
+                Points -= pts;
             }
             else
             {
-                Points = Points;
+                throw new Exception($"Not enough points, Enter a point less than or equal to {Points}Pts");
             }
         }
-            void Punch()
+        public void Punch() 
         {
-            int FinalPrice;
-            if (PunchCard == 10)
-            {
-                PunchCard = 0;
-                FinalPrice = 0;
-            }
-            else
-            {
-                PunchCard += 1;
-            }
+            PunchCard = 0;
         }
         public override string ToString()
         {

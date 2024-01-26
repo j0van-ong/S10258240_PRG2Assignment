@@ -11,6 +11,8 @@
 using S10258240_PRG2Assignment;
 using System;
 using System.Globalization;
+using System.Net.Sockets;
+using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Xml.Linq;
@@ -54,7 +56,7 @@ int DisplayMenu()
 }
 
 /*This method reads from the "customer.csv" file and creates a Dictionary to store their Info, and returns the Dictionary
- * MemberID will be the key*/
+ * MemberID will be the key*/ 
 Dictionary<int, Customer> InitCustomer()
 {
     Dictionary<int, Customer> customerDict = new Dictionary<int, Customer>(); //Create new Dict
@@ -76,6 +78,7 @@ Dictionary<int, Customer> InitCustomer()
         return customerDict;
     }
 }
+
 /*This method reads from "option.csv" and stores the information in a List, to be used for checking all possible options that a user can input*/
 List<IceCream> InitOptionList()
 {
@@ -130,7 +133,7 @@ List<IceCream> InitOptionList()
 }
 
 //This methods initialise the "orders.csv" and makes order corresponding to each customer, then appending to queue. It returns the largest num order id for use later
-int InitOrder(Queue<Order> RegularQueue, Queue<Order> GoldQueue, Dictionary<int, Customer> customerDict)
+int InitOrder(Queue<Order> RegularQueue, Queue<Order> GoldQueue, Dictionary<int, Customer> customerDict, List<Order> mainOrderList)
 {
     int largestId = 0; //dummy value to store
 
@@ -138,7 +141,6 @@ int InitOrder(Queue<Order> RegularQueue, Queue<Order> GoldQueue, Dictionary<int,
     for (int i = 1; i < DataArray.Length; i++)
     {
         List<IceCream> icecreamList = new List<IceCream>(); // Create new ice cream list
-        List<Order> orderHistory = new List<Order>();
         bool premium = false;
         string[] data = DataArray[i].Split(",");
         int id = Convert.ToInt32(data[0]);
@@ -155,6 +157,9 @@ int InitOrder(Queue<Order> RegularQueue, Queue<Order> GoldQueue, Dictionary<int,
         string option = data[4];
         int scoops = Convert.ToInt32(data[5]);
         Order neworder = new Order(id, timeReceived);
+
+        neworder.TimeFulfilled = timefulfilled;
+
         List<Flavour> flavourlist = new List<Flavour>();
         List<Topping> toppingList = new List<Topping>();
 
@@ -190,36 +195,43 @@ int InitOrder(Queue<Order> RegularQueue, Queue<Order> GoldQueue, Dictionary<int,
             string waffleFlavour = data[7];
             Waffle waffle = new Waffle(option, scoops, flavourlist, toppingList, waffleFlavour);
             neworder.iceCreamList.Add(waffle);
+            mainOrderList.Add(neworder);
         }
         else if (option == "Cone")
         {
             bool isDipped = Convert.ToBoolean(data[6]);
             Cone cone = new Cone(option, scoops, flavourlist, toppingList, isDipped);
             neworder.iceCreamList.Add(cone);
+            mainOrderList.Add(neworder);
         }
         else
         {
             Cup cup = new Cup(option, scoops, flavourlist, toppingList);
             neworder.iceCreamList.Add(cup);
+            mainOrderList.Add(neworder);
         }
         foreach (KeyValuePair<int, Customer> kvp in customerDict)
         {
             if (memberID == kvp.Key)
             {
-                kvp.Value.currentOrder = neworder;
-                if (kvp.Value.Rewards.Tier == "Gold")
+                if (neworder.TimeFulfilled == null) //currently not fulfilled
                 {
-                    kvp.Value.orderHistory.Add(neworder);
-                    GoldQueue.Enqueue(neworder);
+                    kvp.Value.currentOrder = neworder;
+                    if (kvp.Value.Rewards.Tier == "Gold")
+                    {
+                        GoldQueue.Enqueue(neworder);
+                    }
+                    else
+                    {
+                        RegularQueue.Enqueue(neworder);
+                    }
                 }
                 else
                 {
                     kvp.Value.orderHistory.Add(neworder);
-                    RegularQueue.Enqueue(neworder);
                 }
-
             }
-        } 
+        }
     }
     return largestId; 
 }
@@ -280,7 +292,23 @@ void ListAllCustomer(Dictionary<int, Customer> cList)
     Console.WriteLine(); //skip line
 }
 
-//This method registers a new customer via prompt, which then append to customer.csv and as well as to customerDict;
+
+
+void DisplayQueues(Queue<Order> GoldQueue, Queue<Order> RegularQueue)
+{
+    Console.WriteLine("-------------------------------\nGold Queue\n-------------------------------");
+    foreach (Order order in GoldQueue)
+    {
+        Console.WriteLine($"Order Id: {order.Id}\tTime Received: {order.TimeReceived}");
+    }
+    Console.WriteLine("-------------------------------\nOrdinary Queue\n-------------------------------");
+    foreach (Order order in RegularQueue)
+    {
+        Console.WriteLine($"Order Id: {order.Id}\tTime Received: {order.TimeReceived}");
+    }
+}
+
+//This method registers a new customer via prompt, which then append to customer.csv and as well as to customerDict, Option 3
 void RegisterNewCustomer(Dictionary<int, Customer> cList)
 {
     while (true)
@@ -346,8 +374,8 @@ void RegisterNewCustomer(Dictionary<int, Customer> cList)
     }
 }
 
-//This method registers a new customer's order via prompt, which then creates order object and append to customer order.
-int CreateCustomerOrder(Dictionary<int, Customer> cList, List<IceCream> icecreamOption, Dictionary<string, Flavour> fList, Dictionary<string, Topping> tList, Queue<Order>normalQ, Queue<Order> goldQ, int lastId )
+//This method registers a new customer's order via prompt, which then creates order object and append to customer order, Option 4
+int CreateCustomerOrder(Dictionary<int, Customer> cList, List<IceCream> icecreamOption, Dictionary<string, Flavour> fList, Dictionary<string, Topping> tList, Queue<Order>normalQ, Queue<Order> goldQ, int lastId, List<Order> mainOrderList)
 {
     while (true)
     {
@@ -379,7 +407,8 @@ int CreateCustomerOrder(Dictionary<int, Customer> cList, List<IceCream> icecream
                 //rest of the program
                 if (cList.ContainsKey(id)) //contain inside Dict, so is valid
                 {
-                    Customer cus = cList[id]; //get its dictionary value, which is the customer object
+                    Customer cus = cList[id]; //get its dictionary value, which is the customer object that we are dealing with
+
                     if (cus.currentOrder != null) //check for relationship of customer CurrentOrder, only 0..1 r/s
                     {
                         throw new Exception("You have a existing order. Please wait for it to dequeue.");
@@ -405,10 +434,13 @@ int CreateCustomerOrder(Dictionary<int, Customer> cList, List<IceCream> icecream
                         else { break; }
                     }
                     
-                    cus.currentOrder = newOrder; //Set to current order of object
+                    //C# hold references to objects, any changes made to the Customer object via the reference obtained from the dictionary will directly affect the object. 
                     string qType; //for use in displaying queue type
                     lastId++;//increment + 1
+                    //Initialisation of attributes
                     newOrder.Id = lastId;
+                    newOrder.TimeFulfilled = null;
+                    cus.currentOrder = newOrder; //Set to current order of object
                     if (cus.Rewards.Tier == "Gold")
                     {
                         qType = "Gold";
@@ -419,8 +451,9 @@ int CreateCustomerOrder(Dictionary<int, Customer> cList, List<IceCream> icecream
                         qType = "Normal";
                         normalQ.Enqueue(newOrder);
                     }
-                    Console.WriteLine(newOrder.ToString() ); //Test Output
-                    Console.WriteLine($"Order Successful. Your OrderID is {newOrder.Id} in the {qType} Queue");
+                    //Console.WriteLine(newOrder.ToString())Test Output
+                    Console.WriteLine($"\nOrder Successful. Your OrderID is {newOrder.Id} in the {qType} Queue");
+                    mainOrderList.Add(newOrder); //Main order list records   
                     break; //end the method
                 }
                 else //if it is not a key in the CustomerDict, invalid input
@@ -555,7 +588,7 @@ IceCream TakingOrders(List<IceCream> icecreamOption, Dictionary<string, Flavour>
 IceCream GetFlavour(int numScoops, IceCream iceCream, Dictionary<string, Flavour> fList)
 {
     int flavourCount = 1; //first loop is counted as one time when first run, hence set to 1
-    while (flavourCount <= numScoops) //tally with corresponding scoops
+    while (flavourCount <= numScoops) //tally with corresponding scoops, counter must be less than or equal to the num of scoops
     {
         //default 1 flavour at least, hence will repeat the amount of times as scoops
         Console.WriteLine("\nAvailable Flavours: \nNormal [Vanilla, Chocolate, Strawberry] \nPremium [Durian, Ube, Sea Salt]");
@@ -629,6 +662,36 @@ IceCream GetTopping(IceCream iceCream, Dictionary<string, Topping> tList)
 
 }
 
+//This method gets the custDict and the memberid to display the correct order, Option 5
+List<Order> DisplayCustomerOrder(Dictionary<int, Customer> cList, int id)
+{
+    if (cList.ContainsKey(id)) //contain inside Dict, so is valid
+    {
+        Customer cus = cList[id]; //get its dictionary value, which is the customer object\
+        if (cus.currentOrder != null)
+        {
+            Console.WriteLine("\n--------------Current Order--------------");
+            Console.WriteLine(cus.currentOrder.ToString());
+        }
+        if (cus.orderHistory.Count >0)
+        {
+            Console.WriteLine("\n--------------Past Order--------------");
+            foreach (Order order in cus.orderHistory)
+            {
+                Console.WriteLine(order.ToString());
+            }    
+        }
+        else
+        {
+            Console.WriteLine("Customer has no orders");
+        }
+        return cus.orderHistory;
+    }
+    else
+    {
+        return null;
+    }
+}
 
 //This method UPDATES THE CSV FILE, before closing the application when 0 is click, to keep the information updated
 void UpdateCSVData(Dictionary<int, Customer> cList)
@@ -645,16 +708,26 @@ void UpdateCSVData(Dictionary<int, Customer> cList)
 }
 
 //This method Process an order and checks it out, from the queue status , ADVANCED PART A
-void ProcessAndCheckOut(Queue<Order> queue, Dictionary<int, Customer> cList)
+void ProcessAndCheckOut(Queue<Order> queue, Dictionary<int, Customer> cList, List<Order> mainOrderList)
 {
-    //initialisation of data
+    //initialisation of data, dummy object and valu
     Customer settleCustomer = new Customer();
+    Order orderToSettle = new Order();
     bool isOrderFound = false;
-    string tier;
-    int points;
+    string tier = "";
+    int points = 0;
+    //Real data
     int completePunch = 10;
-
-    Order orderToSettle = queue.Dequeue(); //Gets the first order to work on
+    double pointsOffsetRate = 0.02;
+    try
+    {
+        orderToSettle = queue.Dequeue(); //Gets the first order to work on
+    }
+    catch (Exception e) //queue empty/unable to dequeue
+    {
+        Console.WriteLine(e.Message);
+        return; //end
+    }
     Console.WriteLine($"Ice Cream Orders: {orderToSettle.ToString()}"); //list the icecream in the order object with tostring
     double totalcost = orderToSettle.CalculateTotal();
     Console.WriteLine($"\nTotal Bill: ${totalcost:0.00}");
@@ -665,26 +738,135 @@ void ProcessAndCheckOut(Queue<Order> queue, Dictionary<int, Customer> cList)
         //test if order made by who
         if (cus.currentOrder != null && cus.currentOrder.Id == orderToSettle.Id) //similar id num, check if curren order is not null first
         {
-            settleCustomer = cus; //assign to this customer class for reference
-            int foundID = settleCustomer.MemberId;
+            settleCustomer = cus; //assign to this customer class for reference****
+            int foundID = settleCustomer.MemberId; //get member id
             tier = settleCustomer.Rewards.Tier;
             points = settleCustomer.Rewards.Points;
-            Console.WriteLine($"Membership Status: {tier}\nPoints: {points}");
+            Console.WriteLine($"MemberID: {foundID}\nMembership Status: {tier}\nPoints: {points}");
             isOrderFound = true;
             break;
         }
     }
-    if (isOrderFound) //bool value to check for customer found
+    if (!isOrderFound) //bool value to check for customer found
     {
-        Console.WriteLine("Cant find the corresponding customer for this order. So sorry.");
+        Console.WriteLine($"Cant find the corresponding customer for this order, Reference number is {orderToSettle.Id}");
         return; //break 
     }
-    //Check for its birthday
-    if (settleCustomer.IsBirthday())
+    //Check for its birthday, get cost
+    totalcost = DetermineCostAfterBday(orderToSettle, settleCustomer, totalcost);
+
+    //Checks for completion of punchcard
+    int punchCard = settleCustomer.Rewards.PunchCard;
+    if ( punchCard == completePunch )
     {
-        double price = 0;
+        settleCustomer.Rewards.Punch(); //reset to 0
+        double deductfree = orderToSettle.iceCreamList[0].CalculatePrice(); //first ice cream in the list ordered
+        try
+        {
+            totalcost = totalcost - deductfree; //minus the fee
+            if (totalcost < 0) //In the case it is their birthday, and punchpoint = 10, should negative be balance
+            {
+                throw new Exception("Negative balance, Puunch points dont need to be used"); 
+            }
+
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+            settleCustomer.Rewards.PunchCard = 10; //CHANGE BACK TO 10
+            totalcost += deductfree;
+        }
+    }
+
+    //Redeeming of points, for selected GOLD OR SILVER
+    if (tier == "Gold" || tier == "Silver")
+    {
+        while (true) //loop to check for correct input of points
+        {
+            Console.Write("\nWould you like to redeem your points? (y/n): ");
+            string response = Console.ReadLine().ToLower();
+            if (response != "n") //user didnt select n, check if its yes
+            {
+                if (response == "y")
+                {
+                    try
+                    {
+                        Console.Write($"Select amount of points to deduct : ");
+                        int choosenPts = Convert.ToInt32(Console.ReadLine());
+                        settleCustomer.Rewards.RedeemPoints(choosenPts);
+                        Console.WriteLine($"Redeem Successful! Remaining Balance: {settleCustomer.Rewards.Points} ");
+                        //Deduction of totalcost further
+                        totalcost -= (choosenPts * pointsOffsetRate); //deduction
+                        break;
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e.Message);
+                        continue;
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("Invalid option, (y/n) only");
+                }
+            }
+            else { break; }
+        }
+    }
+    Console.WriteLine($"\nFinal Nett Price: ${totalcost:0.00}"); //display of final charge
+    Console.WriteLine("\n----PRESS ANY KEY TO MAKE PAYMENT----");
+    Console.ReadKey(); //To read in the random key, useless to store
+
+    //Increment punch card below
+    foreach(IceCream iceCream in orderToSettle.iceCreamList)
+    {
+        if (settleCustomer.Rewards.PunchCard < 10)
+        {
+            settleCustomer.Rewards.PunchCard += 1;
+        }
+    }
+    //Earn points!
+    double rate = 0.72;
+    int pointsEarn = Convert.ToInt32(Math.Floor(totalcost * rate));
+    settleCustomer.Rewards.AddPoints(pointsEarn);
+
+    //  Check for upgrade of Membership, only for members not yet in silver and gold for the first time
+    points = settleCustomer.Rewards.Points; 
+    if (points >= 100) //checks for 100 first, for eg if user is Gold but use all, a score of 54, it will fulfuill first condition and not drop
+    {
+        settleCustomer.Rewards.Tier = "Gold";
+    }
+    else if (points >= 50)
+    {
+        settleCustomer.Rewards.Tier = "Silver";
+    }
+
+    //Marking DateTime for fulfilled in OrderHist, and also updating in the Main Order List
+    orderToSettle.TimeFulfilled = DateTime.Now; //orderToSettle and settleCustomer contains the same object kind
+
+    for (int i = 0; i < mainOrderList.Count; i++)
+    {
+        Order order = mainOrderList[i];
+        if (order.Id == settleCustomer.currentOrder.Id) //finding the corresponding flavour to mark done
+        {
+            order.TimeFulfilled = DateTime.Now;
+        }
+    }
+    settleCustomer.orderHistory.Add(orderToSettle); //add currentOrder to ORDER HIST;
+    settleCustomer.currentOrder = null; //empty now for customer to continue ordering
+
+    //Order done
+    Console.WriteLine("\nOrder Completed!");
+
+}
+
+//Sub method for option 7/8, to determine cost after bday and return the total cost
+double DetermineCostAfterBday(Order orderToSettle, Customer settleCustomer, double totalcost)
+{
+    if (settleCustomer.IsBirthday()) //true or fasle methods
+    {
+        double price = 0; //current price
         double mostexpensive = 0;
-        IceCream freeIC = null;
         foreach (IceCream ic in orderToSettle.iceCreamList) //check which icecream is free
         {
             price = ic.CalculatePrice(); //set price to current icecream
@@ -695,22 +877,12 @@ void ProcessAndCheckOut(Queue<Order> queue, Dictionary<int, Customer> cList)
             else
             {
                 mostexpensive = price; //update most expensive price
-                freeIC = ic; //update to its current icecream obj, free
             }
         }
-        totalcost = orderToSettle.CalculateTotal() - mostexpensive; 
+        totalcost = orderToSettle.CalculateTotal() - mostexpensive;
+        return totalcost;
     }
-    //No birthday, then no discount 
-    //Checks for completion of punchcard
-    if (settleCustomer.Rewards.PunchCard == completePunch)
-    {
-        settleCustomer.Rewards.PunchCard = 0; //reset
-        double deductfree = orderToSettle.iceCreamList[0].CalculatePrice();
-        totalcost = totalcost - deductfree;
-    }
-
-
-
+    return totalcost; //No change
 }
 
 /******************Start of program*********************/
@@ -731,8 +903,10 @@ Dictionary<string, Topping> toppingDict = InitToppingDict();
 Queue<Order> normalQueue = new Queue<Order>();
 Queue<Order> goldQueue = new Queue<Order>();
 
-//Call to initialise data from "orders.csv", and gets the latest order id 
-int latestId = InitOrder(normalQueue, goldQueue, customerDict);
+//Call to initialise OrderLisst
+List<Order> orderList = new List<Order>();
+//Call to initialise data from "orders.csv", and gets the latest order id to be used for creating data 
+int latestId = InitOrder(normalQueue, goldQueue, customerDict, orderList);
 
 while (true)
 {
@@ -748,7 +922,7 @@ while (true)
     }
     else if (option == 2)
     {
-
+        DisplayQueues(goldQueue, normalQueue);
     }
     else if (option == 3)
     {
@@ -757,11 +931,35 @@ while (true)
     else if (option == 4)
     {
         ListAllCustomer(customerDict); 
-        latestId = CreateCustomerOrder(customerDict, icecreamOption, flavourDict, toppingDict, normalQueue, goldQueue, latestId); //updates latestId too
+        
+        latestId = CreateCustomerOrder(customerDict, icecreamOption, flavourDict, toppingDict, normalQueue, goldQueue, latestId, orderList); //updates latestId too
     }
     else if (option == 5)
     {
-
+        ListAllCustomer(customerDict);
+        while (true)
+        {
+            Console.Write("\nEnter MemberID to continue ([0] to exit): ");
+            string tempID = Console.ReadLine();
+            if (tempID == "0") { break; } //end this method 
+            try
+            {
+                int ID = Convert.ToInt32(tempID);
+                if (tempID.Length == 6)
+                {
+                    DisplayCustomerOrder(customerDict, ID);
+                    break; //end
+                }
+                else { Console.WriteLine("Must be 6 digit integer"); }
+            }
+            catch (FormatException ex)
+            {
+                Console.WriteLine(ex.Message);
+                continue;
+            }
+            catch (Exception ex) { Console.WriteLine(ex.Message); continue; }
+            
+        }
     }
     else if (option == 6)
     {
@@ -771,11 +969,11 @@ while (true)
     {
         if (goldQueue.Count > 0) //check for any VIP customers to process first
         {
-            ProcessAndCheckOut(goldQueue, customerDict); //pass in goldqueue first 
+            ProcessAndCheckOut(goldQueue, customerDict, orderList); //pass in goldqueue first 
         }
         else
         {
-            ProcessAndCheckOut(normalQueue, customerDict); //pass normal queue if no one in golden
+            ProcessAndCheckOut(normalQueue, customerDict, orderList); //pass normal queue if no one in golden
         }
     }
 }

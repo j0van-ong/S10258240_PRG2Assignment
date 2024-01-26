@@ -21,7 +21,7 @@ namespace S10258240_PRG2Assignment
         public DateTime DOB {  get; set; }
         public string Name { get; set; }
         public int MemberId { get; set; }
-        public Order currentOrder { get; set; }
+        public Order? currentOrder { get; set; }
         public PointCard Rewards { get; set; }
         public List<Order> orderHistory { get; set; } = new List<Order>() { };
         public Customer() { }
