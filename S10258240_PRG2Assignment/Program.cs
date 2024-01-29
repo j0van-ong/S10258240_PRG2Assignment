@@ -301,7 +301,7 @@ void DisplayQueues(Queue<Order> GoldQueue, Queue<Order> RegularQueue)
     {
         Console.WriteLine($"Order Id: {order.Id}\tTime Received: {order.TimeReceived}");
     }
-    Console.WriteLine("-------------------------------\nOrdinary Queue\n-------------------------------");
+    Console.WriteLine("\n-------------------------------\nOrdinary Queue\n-------------------------------");
     foreach (Order order in RegularQueue)
     {
         Console.WriteLine($"Order Id: {order.Id}\tTime Received: {order.TimeReceived}");
