@@ -421,10 +421,10 @@ int CreateCustomerOrder(Dictionary<int, Customer> cList, List<IceCream> icecream
                     {
                         Console.WriteLine("\n[Y] Would you like to add on more Ice Cream? \n[N] No, Next Step");
                         Console.Write("Enter Option: ");
-                        string response = Console.ReadLine();
-                        if (response != "N")
+                        string response = Console.ReadLine().ToLower();
+                        if (response != "n")
                         {
-                            if (response == "Y")
+                            if (response == "y")
                             {
                                 IceCream icecreamOrder2 = TakingOrders(icecreamOption, fList, tList); //continues creating making of icecream
                                 newOrder.AddIceCream(icecreamOrder2);
@@ -694,7 +694,7 @@ List<Order> DisplayCustomerOrder(Dictionary<int, Customer> cList, int id)
 }
 
 //This method UPDATES THE CSV FILE, before closing the application when 0 is click, to keep the information updated
-void UpdateCSVData(Dictionary<int, Customer> cList)
+void UpdateCSVData(Dictionary<int, Customer> cList, Dictionary<int, double> fpDict)
 {
     //Start off with CustomerDict, 'rewriting' into customer.csv
     string header = "Name,MemberId,DOB,MembershipStatus,MembershipPoints,PunchCard\n";
@@ -705,10 +705,18 @@ void UpdateCSVData(Dictionary<int, Customer> cList)
         string data = currentCus.Name + "," + currentCus.MemberId.ToString() + "," + currentCus.DOB.ToString("dd/MM/yyyy") + "," + currentCus.Rewards.Tier + "," + currentCus.Rewards.Points + "," + currentCus.Rewards.PunchCard + "\n"; //append as string with comma
         File.AppendAllText("customers.csv", data); //no longer need to rewrite, to append
     }
+    //Append and update finalprice
+    string header2 = "Id,FinalPrice\n";
+    File.WriteAllText("finalprice.csv", header2); //This Write 'erases' everything from the exisiting file, restarting
+    foreach(KeyValuePair<int, double> keyValuePair in fpDict)
+    {
+        string info = Convert.ToString(keyValuePair.Key) + "," + Convert.ToString(keyValuePair.Value) + "\n";
+        File.AppendAllText("finalprice.csv", info);
+    }
 }
 
 //This method Process an order and checks it out, from the queue status , ADVANCED PART A
-void ProcessAndCheckOut(Queue<Order> queue, Dictionary<int, Customer> cList, List<Order> mainOrderList)
+void ProcessAndCheckOut(Queue<Order> queue, Dictionary<int, Customer> cList, List<Order> mainOrderList, Dictionary<int, double> fpDict)
 {
     //initialisation of data, dummy object and valu
     Customer settleCustomer = new Customer();
@@ -735,7 +743,7 @@ void ProcessAndCheckOut(Queue<Order> queue, Dictionary<int, Customer> cList, Lis
     //Below checks for which customer the order belongs to
     foreach (Customer cus in cList.Values)
     {
-        //test if order made by who
+        //test if order made by who, NOT NULL ONLY
         if (cus.currentOrder != null && cus.currentOrder.Id == orderToSettle.Id) //similar id num, check if curren order is not null first
         {
             settleCustomer = cus; //assign to this customer class for reference****
@@ -761,6 +769,7 @@ void ProcessAndCheckOut(Queue<Order> queue, Dictionary<int, Customer> cList, Lis
     {
         settleCustomer.Rewards.Punch(); //reset to 0
         double deductfree = orderToSettle.iceCreamList[0].CalculatePrice(); //first ice cream in the list ordered
+        Console.WriteLine("Your 1st Ice Cream is free.");
         try
         {
             totalcost = totalcost - deductfree; //minus the fee
@@ -774,7 +783,7 @@ void ProcessAndCheckOut(Queue<Order> queue, Dictionary<int, Customer> cList, Lis
         {
             Console.WriteLine(e.Message);
             settleCustomer.Rewards.PunchCard = 10; //CHANGE BACK TO 10
-            totalcost += deductfree;
+            totalcost += deductfree; //add back cost
         }
     }
 
@@ -794,10 +803,23 @@ void ProcessAndCheckOut(Queue<Order> queue, Dictionary<int, Customer> cList, Lis
                         Console.Write($"Select amount of points to deduct : ");
                         int choosenPts = Convert.ToInt32(Console.ReadLine());
                         settleCustomer.Rewards.RedeemPoints(choosenPts);
-                        Console.WriteLine($"Redeem Successful! Remaining Balance: {settleCustomer.Rewards.Points} ");
                         //Deduction of totalcost further
                         totalcost -= (choosenPts * pointsOffsetRate); //deduction
+                        if (totalcost < 0)
+                        {
+                            Console.WriteLine("Redeem amount worth is more than total price needed to paid!");
+                            settleCustomer.Rewards.AddPoints(choosenPts); //give back the pts
+                            totalcost += (choosenPts * pointsOffsetRate); //set back the total cost
+                            int maxAmt = Convert.ToInt32(Math.Floor(totalcost / pointsOffsetRate));
+                            Console.WriteLine($"Only a amount of up to {maxAmt} Pts can be used.");
+                            continue;
+                        }
+                        Console.WriteLine($"Redeem Successful! Remaining Balance: {settleCustomer.Rewards.Points} ");
                         break;
+                    }
+                    catch (FormatException e)
+                    {
+                        Console.WriteLine(e.Message);
                     }
                     catch (Exception e)
                     {
@@ -814,7 +836,7 @@ void ProcessAndCheckOut(Queue<Order> queue, Dictionary<int, Customer> cList, Lis
         }
     }
     Console.WriteLine($"\nFinal Nett Price: ${totalcost:0.00}"); //display of final charge
-    Console.WriteLine("\n----PRESS ANY KEY TO MAKE PAYMENT----");
+    Console.Write("\n----PRESS ANY KEY TO MAKE PAYMENT----");
     Console.ReadKey(); //To read in the random key, useless to store
 
     //Increment punch card below
@@ -823,7 +845,11 @@ void ProcessAndCheckOut(Queue<Order> queue, Dictionary<int, Customer> cList, Lis
         if (settleCustomer.Rewards.PunchCard < 10)
         {
             settleCustomer.Rewards.PunchCard += 1;
-        }
+        } 
+    }
+    if (settleCustomer.Rewards.PunchCard == 10) //reaches the amt needed, prompt to let them know
+    {
+        Console.WriteLine("You have reached 10 PunchPts! Next first ice cream order is free.");
     }
     //Earn points!
     double rate = 0.72;
@@ -832,7 +858,7 @@ void ProcessAndCheckOut(Queue<Order> queue, Dictionary<int, Customer> cList, Lis
 
     //  Check for upgrade of Membership, only for members not yet in silver and gold for the first time
     points = settleCustomer.Rewards.Points; 
-    if (points >= 100) //checks for 100 first, for eg if user is Gold but use all, a score of 54, it will fulfuill first condition and not drop
+    if (points >= 100) //checks for 100 first, if user has used all his pts already but is a tier of gold, it will fulfuill first condition and not drop
     {
         settleCustomer.Rewards.Tier = "Gold";
     }
@@ -853,6 +879,7 @@ void ProcessAndCheckOut(Queue<Order> queue, Dictionary<int, Customer> cList, Lis
         }
     }
     settleCustomer.orderHistory.Add(orderToSettle); //add currentOrder to ORDER HIST;
+    fpDict.Add(orderToSettle.Id, totalcost);
     settleCustomer.currentOrder = null; //empty now for customer to continue ordering
 
     //Order done
@@ -885,6 +912,28 @@ double DetermineCostAfterBday(Order orderToSettle, Customer settleCustomer, doub
     return totalcost; //No change
 }
 
+//This is a method to read finalprice.csv, where it has a collection of order price that is successfully dequeue by us, diff from default existing order.csv orders
+Dictionary<int, double> InitFinalPrice()
+{
+    Dictionary<int, double> fpDict = new Dictionary<int, double>();
+    using (StreamReader sr = new StreamReader("finalprice.csv"))
+    {
+        string? s = sr.ReadLine(); // header skip
+        while ((s = sr.ReadLine()) != null)
+        {
+            string[] data = s.Split(",");
+            if (string.IsNullOrEmpty(data[0]) && string.IsNullOrEmpty(data[1])) //at the start, its empty
+            {
+                return fpDict;  //no orders yet
+            }
+            int id = Convert.ToInt32(data[0]);
+            double finalprice = Convert.ToDouble(data[1]);
+            fpDict.Add(id, finalprice);
+        }
+    }
+    return fpDict;
+}
+
 /******************Start of program*********************/
 
 //Call to initialise CustomerDict for reference as collection
@@ -908,12 +957,15 @@ List<Order> orderList = new List<Order>();
 //Call to initialise data from "orders.csv", and gets the latest order id to be used for creating data 
 int latestId = InitOrder(normalQueue, goldQueue, customerDict, orderList);
 
+//Create a new Dictionary to store the respective order id and final price charged
+Dictionary<int, double> finalPriceDict = InitFinalPrice();
+
 while (true)
 {
     int option = DisplayMenu(); //call the menu, and get back the int option
     if (option == 0)
     {
-        UpdateCSVData(customerDict);
+        UpdateCSVData(customerDict, finalPriceDict);
         break; //ends the program for input 0
     }
     else if (option == 1)
@@ -922,7 +974,7 @@ while (true)
     }
     else if (option == 2)
     {
-        DisplayQueues(goldQueue, normalQueue);
+        DisplayQueues(goldQueue, normalQueue); 
     }
     else if (option == 3)
     {
@@ -969,11 +1021,11 @@ while (true)
     {
         if (goldQueue.Count > 0) //check for any VIP customers to process first
         {
-            ProcessAndCheckOut(goldQueue, customerDict, orderList); //pass in goldqueue first 
+            ProcessAndCheckOut(goldQueue, customerDict, orderList, finalPriceDict); //pass in goldqueue first 
         }
         else
         {
-            ProcessAndCheckOut(normalQueue, customerDict, orderList); //pass normal queue if no one in golden
+            ProcessAndCheckOut(normalQueue, customerDict, orderList, finalPriceDict); //pass normal queue if no one in golden
         }
     }
 }
