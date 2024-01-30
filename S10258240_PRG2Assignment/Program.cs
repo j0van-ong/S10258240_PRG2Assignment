@@ -763,21 +763,23 @@ void ProcessAndCheckOut(Queue<Order> queue, Dictionary<int, Customer> cList, Lis
     //Check for its birthday, get cost
     totalcost = DetermineCostAfterBday(orderToSettle, settleCustomer, totalcost);
 
-    //Checks for completion of punchcard
-    int punchCard = settleCustomer.Rewards.PunchCard;
-    if ( punchCard == completePunch )
+    //Checks for completion of punchcard & increment punch card below
+    foreach (IceCream iceCream in orderToSettle.iceCreamList)
     {
-        settleCustomer.Rewards.Punch(); //reset to 0
+        settleCustomer.Rewards.Punch(); //increment by 1, and check if reach 10
+    }
+    if (settleCustomer.Rewards.PunchCard == completePunch)
+    {
         double deductfree = orderToSettle.iceCreamList[0].CalculatePrice(); //first ice cream in the list ordered
-        Console.WriteLine("Your 1st Ice Cream is free.");
         try
         {
             totalcost = totalcost - deductfree; //minus the fee
             if (totalcost < 0) //In the case it is their birthday, and punchpoint = 10, should negative be balance
             {
-                throw new Exception("Negative balance, Puunch points dont need to be used"); 
+                throw new Exception("Negative balance, Puunch points dont need to be used");
             }
-
+            Console.WriteLine("\nYour 1st Ice Cream is free.");
+            Console.WriteLine($"New Price: ${totalcost:0.00}"); //prints after confirmation it can be redeem.
         }
         catch (Exception e)
         {
@@ -792,62 +794,58 @@ void ProcessAndCheckOut(Queue<Order> queue, Dictionary<int, Customer> cList, Lis
     {
         while (true) //loop to check for correct input of points
         {
-            Console.Write("\nWould you like to redeem your points? (y/n): ");
-            string response = Console.ReadLine().ToLower();
-            if (response != "n") //user didnt select n, check if its yes
+            if (totalcost > 0) 
             {
-                if (response == "y")
+                Console.Write("\nWould you like to redeem your points? (y/n): ");
+                string response = Console.ReadLine().ToLower();
+                if (response != "n") //user didnt select n, check if its yes
                 {
-                    try
+                    if (response == "y")
                     {
-                        Console.Write($"Select amount of points to deduct : ");
-                        int choosenPts = Convert.ToInt32(Console.ReadLine());
-                        settleCustomer.Rewards.RedeemPoints(choosenPts);
-                        //Deduction of totalcost further
-                        totalcost -= (choosenPts * pointsOffsetRate); //deduction
-                        if (totalcost < 0)
+                        try
                         {
-                            Console.WriteLine("Redeem amount worth is more than total price needed to paid!");
-                            settleCustomer.Rewards.AddPoints(choosenPts); //give back the pts
-                            totalcost += (choosenPts * pointsOffsetRate); //set back the total cost
-                            int maxAmt = Convert.ToInt32(Math.Floor(totalcost / pointsOffsetRate));
-                            Console.WriteLine($"Only a amount of up to {maxAmt} Pts can be used.");
+                            Console.Write($"Select amount of points to deduct : ");
+                            int choosenPts = Convert.ToInt32(Console.ReadLine());
+                            settleCustomer.Rewards.RedeemPoints(choosenPts);
+                            //Deduction of totalcost further
+                            totalcost -= (choosenPts * pointsOffsetRate); //deduction
+                            if (totalcost < 0)
+                            {
+                                Console.WriteLine("Redeem amount worth is more than total price needed to paid!");
+                                settleCustomer.Rewards.AddPoints(choosenPts); //give back the pts
+                                totalcost += (choosenPts * pointsOffsetRate); //set back the total cost
+                                int maxAmt = Convert.ToInt32(Math.Floor(totalcost / pointsOffsetRate));
+                                Console.WriteLine($"Only a amount of up to {maxAmt} Pts can be used.");
+                                continue;
+                            }
+                            Console.WriteLine($"Redeem Successful! Remaining Balance: {settleCustomer.Rewards.Points} ");
+                            break;
+                        }
+                        catch (FormatException e)
+                        {
+                            Console.WriteLine(e.Message);
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine(e.Message);
                             continue;
                         }
-                        Console.WriteLine($"Redeem Successful! Remaining Balance: {settleCustomer.Rewards.Points} ");
-                        break;
                     }
-                    catch (FormatException e)
+                    else
                     {
-                        Console.WriteLine(e.Message);
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e.Message);
-                        continue;
+                        Console.WriteLine("Invalid option, (y/n) only");
                     }
                 }
-                else
-                {
-                    Console.WriteLine("Invalid option, (y/n) only");
-                }
+                else { break; } //user clicks 'no'
             }
-            else { break; }
+            else { break; } //total cost <0, dont need to redeem pts
         }
     }
     Console.WriteLine($"\nFinal Nett Price: ${totalcost:0.00}"); //display of final charge
     Console.Write("\n----PRESS ANY KEY TO MAKE PAYMENT----");
     Console.ReadKey(); //To read in the random key, useless to store
 
-    //Increment punch card below
-    foreach(IceCream iceCream in orderToSettle.iceCreamList)
-    {
-        if (settleCustomer.Rewards.PunchCard < 10)
-        {
-            settleCustomer.Rewards.PunchCard += 1;
-        } 
-    }
-    if (settleCustomer.Rewards.PunchCard == 10) //reaches the amt needed, prompt to let them know
+    if (settleCustomer.Rewards.PunchCard == completePunch) //reaches the amt needed, prompt to let them know
     {
         Console.WriteLine("You have reached 10 PunchPts! Next first ice cream order is free.");
     }

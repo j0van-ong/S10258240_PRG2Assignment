@@ -45,7 +45,13 @@ namespace S10258240_PRG2Assignment
         }
         public void Punch() 
         {
-            PunchCard = 0;
+            int max = 10;
+            if (PunchCard == max) //already 10 at the start, so dont need to increment
+            {
+                return; 
+            }
+            PunchCard++; //+1
+
         }
         public override string ToString()
         {
