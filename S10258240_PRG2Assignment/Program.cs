@@ -135,8 +135,8 @@ List<IceCream> InitOptionList()
 //This methods initialise the "orders.csv" and makes order corresponding to each customer, then appending to queue. It returns the largest num order id for use later
 int InitOrder(Queue<Order> RegularQueue, Queue<Order> GoldQueue, Dictionary<int, Customer> customerDict, List<Order> mainOrderList)
 {
+    int prevOrderId = -1;
     int largestId = 0; //dummy value to store
-
     string[] DataArray = File.ReadAllLines("orders.csv");
     for (int i = 1; i < DataArray.Length; i++)
     {
@@ -144,7 +144,6 @@ int InitOrder(Queue<Order> RegularQueue, Queue<Order> GoldQueue, Dictionary<int,
         bool premium = false;
         string[] data = DataArray[i].Split(",");
         int id = Convert.ToInt32(data[0]);
-        
         //Check if current id is more than stored id
         if (id > largestId)
         {
@@ -152,21 +151,18 @@ int InitOrder(Queue<Order> RegularQueue, Queue<Order> GoldQueue, Dictionary<int,
         }
 
         int memberID = Convert.ToInt32(data[1]);
+
         DateTime timeReceived = Convert.ToDateTime(data[2]);
         DateTime timefulfilled = Convert.ToDateTime(data[3]);
         string option = data[4];
         int scoops = Convert.ToInt32(data[5]);
-        Order neworder = new Order(id, timeReceived);
-
-        neworder.TimeFulfilled = timefulfilled;
-
         List<Flavour> flavourlist = new List<Flavour>();
         List<Topping> toppingList = new List<Topping>();
+
 
         // Populate flavour list
         for (int j = 8; j <= 10; j++)
         {
-            bool isInside = false;
             string flavourData = data[j];
             if (!string.IsNullOrEmpty(flavourData))
             {
@@ -190,50 +186,97 @@ int InitOrder(Queue<Order> RegularQueue, Queue<Order> GoldQueue, Dictionary<int,
                 toppingList.Add(newTopping);
             }
         }
-        if (option == "Waffle")
+        if (id != prevOrderId)
         {
-            string waffleFlavour = data[7];
-            Waffle waffle = new Waffle(option, scoops, flavourlist, toppingList, waffleFlavour);
-            neworder.iceCreamList.Add(waffle);
-            mainOrderList.Add(neworder);
-        }
-        else if (option == "Cone")
-        {
-            bool isDipped = Convert.ToBoolean(data[6]);
-            Cone cone = new Cone(option, scoops, flavourlist, toppingList, isDipped);
-            neworder.iceCreamList.Add(cone);
-            mainOrderList.Add(neworder);
-        }
-        else
-        {
-            Cup cup = new Cup(option, scoops, flavourlist, toppingList);
-            neworder.iceCreamList.Add(cup);
-            mainOrderList.Add(neworder);
-        }
-        foreach (KeyValuePair<int, Customer> kvp in customerDict)
-        {
-            if (memberID == kvp.Key)
+            Order newOrder = null;
+            newOrder = new Order(id, timeReceived);
+            if (option == "Waffle")
             {
-                if (neworder.TimeFulfilled == null) //currently not fulfilled
+                string waffleFlavour = data[7];
+                Waffle waffle = new Waffle(option, scoops, flavourlist, toppingList, waffleFlavour);
+                newOrder.iceCreamList.Add(waffle);
+                //mainOrderList.Add(newOrder);
+            }
+            else if (option == "Cone")
+            {
+                bool isDipped = Convert.ToBoolean(data[6]);
+                Cone cone = new Cone(option, scoops, flavourlist, toppingList, isDipped);
+                newOrder.iceCreamList.Add(cone);
+                // mainOrderList.Add(newOrder);
+            }
+            else
+            {
+                Cup cup = new Cup(option, scoops, flavourlist, toppingList);
+                newOrder.iceCreamList.Add(cup);
+                //mainOrderList.Add(newOrder);
+            }
+            newOrder.TimeFulfilled = timefulfilled;
+            prevOrderId = id;
+            mainOrderList.Add(newOrder);
+            foreach (KeyValuePair<int, Customer> kvp in customerDict)
+            {
+                if (memberID == kvp.Key)
                 {
-                    kvp.Value.currentOrder = neworder;
-                    if (kvp.Value.Rewards.Tier == "Gold")
+                    if (newOrder.TimeFulfilled == null)
                     {
-                        GoldQueue.Enqueue(neworder);
+                        kvp.Value.currentOrder = newOrder;
+                        if (kvp.Value.Rewards.Tier == "Gold")
+                        {
+                            GoldQueue.Enqueue(newOrder);
+                        }
+                        else
+                        {
+                            RegularQueue.Enqueue(newOrder);
+                        }
                     }
                     else
                     {
-                        RegularQueue.Enqueue(neworder);
+                        kvp.Value.orderHistory.Add(newOrder);
+
                     }
                 }
-                else
-                {
-                    kvp.Value.orderHistory.Add(neworder);
-                }
+
             }
         }
+        else
+        {
+            foreach (KeyValuePair<int, Customer> kvp in customerDict)
+            {
+                if (memberID == kvp.Key)
+                {
+                    foreach (Order order in kvp.Value.orderHistory)
+                    {
+                        if (order.Id == id)
+                        {
+                            if (option == "Waffle")
+                            {
+                                string waffleFlavour = data[7];
+                                Waffle waffle = new Waffle(option, scoops, flavourlist, toppingList, waffleFlavour);
+                                order.iceCreamList.Add(waffle);
+                                //mainOrderList.Add(newOrder);
+                            }
+                            else if (option == "Cone")
+                            {
+                                bool isDipped = Convert.ToBoolean(data[6]);
+                                Cone cone = new Cone(option, scoops, flavourlist, toppingList, isDipped);
+                                order.iceCreamList.Add(cone);
+                                // mainOrderList.Add(newOrder);
+                            }
+                            else
+                            {
+                                Cup cup = new Cup(option, scoops, flavourlist, toppingList);
+                                order.iceCreamList.Add(cup);
+                                //mainOrderList.Add(newOrder);
+                            }
+                        }
+                    }
+                }
+            }
+
+        }
+
     }
-    return largestId; 
+    return largestId;
 }
 
 /*This method reads from "flavour.csv" creates Flavour Dictionary to store the Flavours available, with the flavour name the key and
