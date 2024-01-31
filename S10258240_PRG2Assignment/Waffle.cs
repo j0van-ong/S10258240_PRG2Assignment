@@ -62,7 +62,7 @@ namespace S10258240_PRG2Assignment
             }
             //Checking of special flavour waffles
             double addWFlavour = 3;
-            if (waffleFlavour != "original")
+            if (waffleFlavour != "original") 
             {
                 cost += addWFlavour;
             }

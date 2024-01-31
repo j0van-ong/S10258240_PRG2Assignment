@@ -10,11 +10,13 @@
 
 using S10258240_PRG2Assignment;
 using System;
+using System.Diagnostics;
 using System.Globalization;
 using System.Net.Sockets;
 using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
+using System.Transactions;
 using System.Xml.Linq;
 
 /*This function displays the menu for the overall application and returns a integer, 
@@ -132,8 +134,7 @@ List<IceCream> InitOptionList()
     }
 }
 
-//This methods initialise the "orders.csv" and makes order corresponding to each customer, then appending to queue. It returns the largest num order id for use later
-int InitOrder(Queue<Order> RegularQueue, Queue<Order> GoldQueue, Dictionary<int, Customer> customerDict, List<Order> mainOrderList)
+int InitOrder(Queue<Order> RegularQueue, Queue<Order> GoldQueue, Dictionary<int, Customer> customerDict, List<Order> mainOrderList, List<Order> fulfilledOrders)
 {
     int prevOrderId = -1;
     int largestId = 0; //dummy value to store
@@ -144,6 +145,7 @@ int InitOrder(Queue<Order> RegularQueue, Queue<Order> GoldQueue, Dictionary<int,
         bool premium = false;
         string[] data = DataArray[i].Split(",");
         int id = Convert.ToInt32(data[0]);
+
         //Check if current id is more than stored id
         if (id > largestId)
         {
@@ -154,7 +156,7 @@ int InitOrder(Queue<Order> RegularQueue, Queue<Order> GoldQueue, Dictionary<int,
 
         DateTime timeReceived = Convert.ToDateTime(data[2]);
         DateTime timefulfilled = Convert.ToDateTime(data[3]);
-        string option = data[4];
+        string option = data[4].ToLower();
         int scoops = Convert.ToInt32(data[5]);
         List<Flavour> flavourlist = new List<Flavour>();
         List<Topping> toppingList = new List<Topping>();
@@ -163,11 +165,11 @@ int InitOrder(Queue<Order> RegularQueue, Queue<Order> GoldQueue, Dictionary<int,
         // Populate flavour list
         for (int j = 8; j <= 10; j++)
         {
-            string flavourData = data[j];
+            string flavourData = data[j].ToLower();
             if (!string.IsNullOrEmpty(flavourData))
             {
                 int quantity = 1;
-                if (flavourData == "Durian" || flavourData == "Ube" || flavourData == "Sea Salt")
+                if (flavourData == "durian" || flavourData == "ube" || flavourData == "sea salt")
                 {
                     premium = true;
                 }
@@ -177,9 +179,9 @@ int InitOrder(Queue<Order> RegularQueue, Queue<Order> GoldQueue, Dictionary<int,
         }
 
         // Populate topping list
-        for (int j = 11; j <= 13; j++)
+        for (int j = 11; j <= 14; j++)
         {
-            string toppingData = data[j];
+            string toppingData = data[j].ToLower();
             if (!string.IsNullOrEmpty(toppingData))
             {
                 Topping newTopping = new Topping(toppingData);
@@ -190,14 +192,14 @@ int InitOrder(Queue<Order> RegularQueue, Queue<Order> GoldQueue, Dictionary<int,
         {
             Order newOrder = null;
             newOrder = new Order(id, timeReceived);
-            if (option == "Waffle")
+            if (option == "waffle")
             {
-                string waffleFlavour = data[7];
+                string waffleFlavour = data[7].ToLower() ;
                 Waffle waffle = new Waffle(option, scoops, flavourlist, toppingList, waffleFlavour);
                 newOrder.iceCreamList.Add(waffle);
                 //mainOrderList.Add(newOrder);
             }
-            else if (option == "Cone")
+            else if (option == "cone")
             {
                 bool isDipped = Convert.ToBoolean(data[6]);
                 Cone cone = new Cone(option, scoops, flavourlist, toppingList, isDipped);
@@ -211,8 +213,9 @@ int InitOrder(Queue<Order> RegularQueue, Queue<Order> GoldQueue, Dictionary<int,
                 //mainOrderList.Add(newOrder);
             }
             newOrder.TimeFulfilled = timefulfilled;
-            prevOrderId = id;
+            prevOrderId = id; //for use ltr
             mainOrderList.Add(newOrder);
+
             foreach (KeyValuePair<int, Customer> kvp in customerDict)
             {
                 if (memberID == kvp.Key)
@@ -232,13 +235,13 @@ int InitOrder(Queue<Order> RegularQueue, Queue<Order> GoldQueue, Dictionary<int,
                     else
                     {
                         kvp.Value.orderHistory.Add(newOrder);
-
+                        fulfilledOrders.Add(newOrder);
                     }
                 }
 
             }
         }
-        else
+        else //already exist the order id
         {
             foreach (KeyValuePair<int, Customer> kvp in customerDict)
             {
@@ -248,14 +251,14 @@ int InitOrder(Queue<Order> RegularQueue, Queue<Order> GoldQueue, Dictionary<int,
                     {
                         if (order.Id == id)
                         {
-                            if (option == "Waffle")
+                            if (option == "waffle")
                             {
-                                string waffleFlavour = data[7];
+                                string waffleFlavour = data[7].ToLower();
                                 Waffle waffle = new Waffle(option, scoops, flavourlist, toppingList, waffleFlavour);
                                 order.iceCreamList.Add(waffle);
                                 //mainOrderList.Add(newOrder);
                             }
-                            else if (option == "Cone")
+                            else if (option == "cone")
                             {
                                 bool isDipped = Convert.ToBoolean(data[6]);
                                 Cone cone = new Cone(option, scoops, flavourlist, toppingList, isDipped);
@@ -708,6 +711,7 @@ IceCream GetTopping(IceCream iceCream, Dictionary<string, Topping> tList)
 //This method gets the custDict and the memberid to display the correct order, Option 5
 List<Order> DisplayCustomerOrder(Dictionary<int, Customer> cList, int id)
 {
+    bool isOrderExist = false;
     if (cList.ContainsKey(id)) //contain inside Dict, so is valid
     {
         Customer cus = cList[id]; //get its dictionary value, which is the customer object\
@@ -715,6 +719,7 @@ List<Order> DisplayCustomerOrder(Dictionary<int, Customer> cList, int id)
         {
             Console.WriteLine("\n--------------Current Order--------------");
             Console.WriteLine(cus.currentOrder.ToString());
+            isOrderExist = true;
         }
         if (cus.orderHistory.Count >0)
         {
@@ -722,9 +727,10 @@ List<Order> DisplayCustomerOrder(Dictionary<int, Customer> cList, int id)
             foreach (Order order in cus.orderHistory)
             {
                 Console.WriteLine(order.ToString());
-            }    
+            }
+            isOrderExist = true;
         }
-        else
+        if (!isOrderExist)
         {
             Console.WriteLine("Customer has no orders");
         }
@@ -736,8 +742,264 @@ List<Order> DisplayCustomerOrder(Dictionary<int, Customer> cList, int id)
     }
 }
 
-//This method UPDATES THE CSV FILE, before closing the application when 0 is click, to keep the information updated
-void UpdateCSVData(Dictionary<int, Customer> cList, Dictionary<int, double> fpDict)
+//Returns selected customer object in option 6
+Customer GetSelectedCustomerObject(Dictionary<int, Customer> cList, int id)
+{
+    if (cList.ContainsKey(id)) //contain inside Dict, so is valid
+    {
+        Customer cus = cList[id];
+        return cus;
+    }
+    return null;
+}
+
+//Option 6 method
+void ModifyingCurrentOrder(Dictionary<int, Customer> customerDict, Dictionary<string, Flavour> flavourDict, Dictionary<string, Topping> toppingDict, List<IceCream> icecreamOption)
+{
+    //List all available customer to select
+    ListAllCustomer(customerDict);
+    while (true)
+    {
+        try
+        {
+            Console.Write("\nEnter MemberID to continue(Input integer pls): ");
+            string tempID = Console.ReadLine();
+            if (tempID.Length == 6)
+            {
+                int ID = 0;
+                try
+                {
+                    ID = Convert.ToInt32(tempID);
+                }
+                catch (FormatException)
+                {
+                    Console.WriteLine("Must be integer.");
+                    continue;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                    continue;
+
+                }
+                if (customerDict.ContainsKey(ID)) //contain inside Dict, so is valid
+                {
+                    while (true)
+                    {
+                        int option = 0;
+                        //Get customer class instance of customer use selected
+                        Customer selectedCustomer = GetSelectedCustomerObject(customerDict, ID);
+                        if (selectedCustomer.currentOrder == null)
+                        {
+                            Console.WriteLine("Customer you selected has no current orders");
+                            break;
+                        }
+                        Console.WriteLine("\nCurrent order: \n" + selectedCustomer.currentOrder);
+                        Console.WriteLine("\nCurrent order: \n" + selectedCustomer.currentOrder);
+                        Console.WriteLine(); //skip line
+                        Console.WriteLine("---------------MENU---------------");//Lists menu
+                                                                                //store the menu options for referencing in a list
+                        string[] menuArray = { "Modify existing ice cream", "Add ice cream to current order", "Delete ice cream from current order" };
+                        for (int i = 0; i < menuArray.Length; i++)
+                        {
+                            Console.WriteLine($"[{i + 1}] {menuArray[i]}");
+                        }
+                        Console.WriteLine("[0] Exit");
+                        try
+                        {
+                            Console.Write("\nEnter option: ");
+                            option = Convert.ToInt32(Console.ReadLine());
+                            if (option == 0)
+                            {
+                                break;
+                            }
+                            else if (option == 1)
+                            {
+                                for (int i = 0; i < selectedCustomer.currentOrder.iceCreamList.Count; i++)
+                                {
+                                    Console.WriteLine("\nIce cream index: " + (i + 1));
+                                    Console.WriteLine(selectedCustomer.currentOrder.iceCreamList[i].ToString());
+                                }
+                                Console.Write("Choose the index of the ice cream you want to modify(input number pls): ");
+                                int iceCreamIndex = Convert.ToInt32(Console.ReadLine());
+                                iceCreamIndex = iceCreamIndex - 1;
+                                selectedCustomer.currentOrder.ModifyIceCream(iceCreamIndex);
+                            }
+                            if (option > menuArray.Length || option < 0) //checking for the range of num
+                            {
+                                Console.WriteLine("Please enter a number in range");
+                                continue;
+                            }
+                            else if (option == 2)
+                            {
+                                //Gives user option to make new ice cream and add it to currentorder icecreamList
+                                AddIceCream(selectedCustomer, flavourDict, toppingDict, icecreamOption);
+                                break;
+                            }
+                            else if (option == 3)
+                            {
+                                //Deletes ice cream of user choice will not delete if only 1 icecream inside 
+                                DeleteIceCream(selectedCustomer);
+                                break;
+                            }
+
+                        }
+
+
+                        catch (FormatException ex) //for input that cant be converted to int
+                        {
+                            Console.WriteLine(ex.Message);
+                            continue;
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine(ex.Message);
+                            continue;
+                        }
+                        break;
+                    }
+                }
+                else
+                {
+                    throw new Exception("MemberID does not exist, try again. If new user, please proceed to [3] to register");
+                }
+            }
+            else
+            {
+                throw new Exception("MemberID must be 6 digit integer");
+
+            }
+            break;
+        }
+        catch (FormatException ex) //for input that cant be converted to int
+        {
+            Console.WriteLine(ex.Message);
+            continue;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            continue;
+
+        }
+    }
+}
+
+void AddIceCream(Customer customer, Dictionary<string, Flavour> fList, Dictionary<string, Topping> tList, List<IceCream> icecreamOption)
+{
+    Console.WriteLine("Current Ice Cream in order:\n-----------------\n");
+    foreach (IceCream icecream in customer.currentOrder.iceCreamList)
+    {
+        Console.WriteLine(icecream.ToString());
+    }
+    IceCream icecreamOrder = TakingOrders(icecreamOption, fList, tList);
+    customer.currentOrder.AddIceCream(icecreamOrder);
+}
+
+//Deletes icecream from currentOrder icecream list for option 6
+void DeleteIceCream(Customer customer)
+{
+    while (true)
+    {
+        if (customer.currentOrder.iceCreamList.Count > 1)
+        {
+            Console.WriteLine("Current Ice Cream in order:\n-----------------");
+            for (int i = 0; i < customer.currentOrder.iceCreamList.Count; i++)
+            {
+                Console.WriteLine("\nIce cream index: " + Convert.ToString(i + 1));
+                Console.WriteLine(customer.currentOrder.iceCreamList[i].ToString());
+            }
+            try
+            {
+                Console.Write("\nChoose the index of the ice cream you want to delete(input number pls): ");
+                int iceCreamIndex = Convert.ToInt32(Console.ReadLine());
+                if (iceCreamIndex == 0 || iceCreamIndex > customer.currentOrder.iceCreamList.Count)
+                {
+                    Console.WriteLine("Index not in ice cream list");
+                    continue;
+                }
+                customer.currentOrder.DeleteIceCream(iceCreamIndex);
+                Console.WriteLine("Current Ice Cream in order:\n-----------------");
+                foreach (IceCream icecream in customer.currentOrder.iceCreamList)
+                {
+                    Console.WriteLine(icecream.ToString());
+                }
+                break;
+            }
+            catch (FormatException ex)
+            {
+                Console.WriteLine(ex.Message);
+                continue;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                continue;
+            }
+        }
+        else
+        {
+            Console.WriteLine("Unable to delete. Cannot have zero icecream in a order");
+            break;
+        }
+    }
+
+}
+
+void FillFinalPriceCSVData(Dictionary<int, double> finalPriceDictionary)
+{
+    int OrderID = 0;
+    double finalPrice = 0;
+    string header2 = "Id,FinalPrice\n";
+    File.WriteAllText("finalprice.csv", header2); //This Write 'erases' everything from the exisiting file, restarting
+    foreach (KeyValuePair<int, double> kvp in finalPriceDictionary)
+    {
+        OrderID = kvp.Key;
+        finalPrice = kvp.Value;
+        string info = Convert.ToString(kvp.Key + "," + Convert.ToString(kvp.Value) + "\n");
+        File.AppendAllText("finalprice.csv", info);
+    }
+}
+
+// Advanced B, display charges
+Dictionary<string, double> DisplayMonthlyCharges(List<Order> fulfilledOrder, Dictionary<int, double> fpDict, int year)
+{
+    string[] Months = { "Buffer", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+Dictionary<string, double> MonthlyCharges = new Dictionary<string, double>();
+double amount = 0;
+foreach (Order order in fulfilledOrder)
+{
+    if (order.TimeFulfilled?.Year == year) //wont be null, since we already checked using fulfilled list
+    {
+        for (int i = 1; i < 13; i++)
+        {
+            if (order.TimeFulfilled?.Month == i)
+            {
+                double orderID = 0;
+                double value = 0;
+                foreach (KeyValuePair<int, double> kvp in fpDict)
+                {
+                    orderID = kvp.Key;
+                    value = kvp.Value;
+                    if (order.Id == orderID)
+                    {
+                        amount += value;
+                        MonthlyCharges[Months[i]] = amount;
+                    }
+                }
+            }
+            else
+            {
+                MonthlyCharges[Months[i]] = 0;
+            }
+        }
+    }
+}
+return MonthlyCharges;
+}
+
+//This method UPDATES THE Customer CSV FILE, before closing the application when 0 is click, to keep the information updated
+void UpdateCustomerCSVData(Dictionary<int, Customer> cList)
 {
     //Start off with CustomerDict, 'rewriting' into customer.csv
     string header = "Name,MemberId,DOB,MembershipStatus,MembershipPoints,PunchCard\n";
@@ -748,18 +1010,100 @@ void UpdateCSVData(Dictionary<int, Customer> cList, Dictionary<int, double> fpDi
         string data = currentCus.Name + "," + currentCus.MemberId.ToString() + "," + currentCus.DOB.ToString("dd/MM/yyyy") + "," + currentCus.Rewards.Tier + "," + currentCus.Rewards.Points + "," + currentCus.Rewards.PunchCard + "\n"; //append as string with comma
         File.AppendAllText("customers.csv", data); //no longer need to rewrite, to append
     }
-    //Append and update finalprice
-    string header2 = "Id,FinalPrice\n";
-    File.WriteAllText("finalprice.csv", header2); //This Write 'erases' everything from the exisiting file, restarting
-    foreach(KeyValuePair<int, double> keyValuePair in fpDict)
+}
+
+//This method updates ordercsv by rewritting it and adding updated orders to order.csv, ONLY FOR FULFILLED ORDERS.
+void UpdateOrderCSV(List<Order> fulfilledOrderList, Dictionary<int, Customer> customerDictionary)
+{
+    string file = "orders.csv";
+    using StreamWriter writer = new StreamWriter(file, false);
     {
-        string info = Convert.ToString(keyValuePair.Key) + "," + Convert.ToString(keyValuePair.Value) + "\n";
-        File.AppendAllText("finalprice.csv", info);
+        writer.WriteLine("Id,MemberId,TimeReceived,TimeFulfilled,Option,Scoops,Dipped,WaffleFlavour,Flavour1,Flavour2,Flavour3,Topping1,Topping2,Topping3,Topping4");
+        foreach (Order order in fulfilledOrderList)
+        {
+            string memberID = "";
+            bool IsFound = false;
+            string TimeFulfilled = "";
+            string TimeReceived = "";
+            foreach (Customer customer in customerDictionary.Values)
+            {
+                foreach (Order customerOrder in customer.orderHistory)
+                {
+                    if (customerOrder.Id == order.Id)
+                    {
+                        memberID = Convert.ToString(customer.MemberId);
+                        IsFound = true;
+                        break;
+                    }
+                }
+                if (IsFound)
+                {
+                    break;
+                }
+            }
+            if (!string.IsNullOrEmpty(Convert.ToString(order.TimeFulfilled)))//check if time fulfilled is null and makes it into a string if not
+            {
+                TimeFulfilled = order.TimeFulfilled?.ToString();
+            }
+            TimeReceived = order.TimeReceived.ToString();
+            foreach (IceCream icecream in order.iceCreamList)
+            {
+                string Flavour = "";
+                string Topping = "";
+                string WaffleFlavour = "";
+                string IsDipped = "";
+                List<string> flavourList = new List<string>();
+                foreach (Flavour flavour in icecream.Flavours)
+                {
+                    flavourList.Add(flavour.Type);
+                }
+                if (flavourList.Count <= 3)//checks if final flavourlist is less than 3
+                {
+                    while (flavourList.Count < 3)//adds blanks to make length equal to 3
+                    {
+                        flavourList.Add("");
+
+                    }
+                }
+                List<string> toppingList = new List<string>();
+                foreach (Topping topping in icecream.Toppings)
+                {
+                    toppingList.Add(topping.Type);
+                }
+                if (toppingList.Count <= 4)//check if final toppinglist is less than 4
+                {
+                    while (toppingList.Count < 4)//adds blanks until length is equal to 4
+                    {
+                        toppingList.Add("");
+                    }
+                }
+                if (icecream is Waffle)//gets waffleflavour and assign value to string
+                {
+                    Waffle waffle = (Waffle)icecream;
+                    WaffleFlavour = waffle.WaffleFlavour;
+                }
+                else if (icecream is Cone)//assign boolean of dipped to string
+                {
+                    Cone cone = (Cone)icecream;
+                    if (cone.Dipped)
+                    {
+                        IsDipped = "True";
+                    }
+                    else
+                    {
+                        IsDipped = "False";
+                    }
+                }
+                Flavour = String.Join(",", flavourList);//make entire flavourlist into a string
+                Topping = String.Join(",", toppingList);//makes entire toppinglist into a string
+                writer.Write("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9}\n", order.Id, memberID, TimeReceived, TimeFulfilled, icecream.Option, icecream.Scoops, IsDipped, WaffleFlavour, Flavour, Topping);
+            }
+        }
     }
 }
 
 //This method Process an order and checks it out, from the queue status , ADVANCED PART A
-void ProcessAndCheckOut(Queue<Order> queue, Dictionary<int, Customer> cList, List<Order> mainOrderList, Dictionary<int, double> fpDict)
+void ProcessAndCheckOut(Queue<Order> queue, Dictionary<int, Customer> cList, List<Order> mainOrderList, Dictionary<int, double> fpDict, List<Order> fulfilledOrders)
 {
     //initialisation of data, dummy object and valu
     Customer settleCustomer = new Customer();
@@ -811,14 +1155,35 @@ void ProcessAndCheckOut(Queue<Order> queue, Dictionary<int, Customer> cList, Lis
     {
         settleCustomer.Rewards.Punch(); //this method will check if its 10 at the start and reset
         double deductfree = orderToSettle.iceCreamList[0].CalculatePrice(); //first ice cream in the list ordered
-        try
+        try //testing if deducting after bday will clash w negative balance
         {
-            totalcost = totalcost - deductfree; //minus the fee
-            if (totalcost < 0) //In the case it is their birthday, and punchpoint = 10, should negative be balance
+            totalcost = totalcost - deductfree; //minus the fee, eg if total cost($18) first is $14(most ex but bday), then left 4-14 <0
+            if (totalcost >= 0)  //no problem w negative balance
+            {
+                Console.WriteLine("\nYour 1st Ice Cream is free.");
+            }
+            else if (totalcost < 0 && orderToSettle.iceCreamList.Count == 1) //In the case it is their birthday, and punchpoint = 10, should negative be balance
             {
                 throw new Exception("Negative balance, Puunch points dont need to be used");
             }
-            Console.WriteLine("\nYour 1st Ice Cream is free.");
+            else if (totalcost < 0 && orderToSettle.iceCreamList.Count > 1)//have more than 1 ice cream inside, next ice cream is used
+            {
+                totalcost += deductfree; //add back cost
+                Console.WriteLine("Deducting the next valid ice cream as first ice cream is already discounted");
+                for (int i = 1; i < orderToSettle.iceCreamList.Count; i++)
+                {
+                    totalcost = totalcost - orderToSettle.iceCreamList[i].CalculatePrice();
+                    if (totalcost>= 0)
+                    {
+                        break;
+                    }
+                    else //still negative
+                    {
+                        totalcost = totalcost + orderToSettle.iceCreamList[i].CalculatePrice(); //add back
+                        continue;
+                    }
+                }
+            }
             Console.WriteLine($"New Price: ${totalcost:0.00}"); //prints after confirmation it can be redeem.
         }
         catch (Exception e)
@@ -928,7 +1293,7 @@ void ProcessAndCheckOut(Queue<Order> queue, Dictionary<int, Customer> cList, Lis
     settleCustomer.orderHistory.Add(orderToSettle); //add currentOrder to ORDER HIST;
     fpDict.Add(orderToSettle.Id, totalcost);
     settleCustomer.currentOrder = null; //empty now for customer to continue ordering
-
+    fulfilledOrders.Add(orderToSettle);
     //Order done
     Console.WriteLine("\nOrder Completed!");
 
@@ -959,26 +1324,47 @@ double DetermineCostAfterBday(Order orderToSettle, Customer settleCustomer, doub
     return totalcost; //No change
 }
 
-//This is a method to read finalprice.csv, where it has a collection of order price that is successfully dequeue by us, diff from default existing order.csv orders
+//This intitialise the order and cost that were successfully fulfilled, for advanced B when subsequently run
 Dictionary<int, double> InitFinalPrice()
 {
-    Dictionary<int, double> fpDict = new Dictionary<int, double>();
+    Dictionary<int, double> finalPriceDictionary = new Dictionary<int, double>();
     using (StreamReader sr = new StreamReader("finalprice.csv"))
     {
-        string? s = sr.ReadLine(); // header skip
+        string? s = sr.ReadLine(); //header skip
         while ((s = sr.ReadLine()) != null)
         {
             string[] data = s.Split(",");
-            if (string.IsNullOrEmpty(data[0]) && string.IsNullOrEmpty(data[1])) //at the start, its empty
-            {
-                return fpDict;  //no orders yet
-            }
-            int id = Convert.ToInt32(data[0]);
-            double finalprice = Convert.ToDouble(data[1]);
-            fpDict.Add(id, finalprice);
+            int orderid = Convert.ToInt32(data[0]);
+            double totalcost = Convert.ToDouble(data[1]);
+            finalPriceDictionary.Add(orderid, totalcost);
         }
     }
-    return fpDict;
+    return finalPriceDictionary;
+}
+
+//fills it up with the id and cost at the start of system
+Dictionary<int, double> FillFinalPriceDict(List<Order> fulfilledOrders)
+{
+    string fileContent = File.ReadAllText("finalprice.csv");
+    if (string.IsNullOrWhiteSpace(fileContent))//if file empty take data from order.csv and append data to finalprice dictionary, only for the first time running
+    {
+        Dictionary<int, double> finalPriceDictionary = new Dictionary<int, double>();
+        foreach (Order order1 in fulfilledOrders)
+        {
+            double price = 0;
+            foreach (IceCream icecream in order1.iceCreamList)
+            {
+                price += icecream.CalculatePrice();
+            }
+            finalPriceDictionary.Add(order1.Id, price);
+        }
+        return finalPriceDictionary;
+    }
+    else//if file not empty , intialise it and store data into finalprice dictionary
+    {
+        Dictionary<int, double> finalPriceDictionary = InitFinalPrice();
+        return finalPriceDictionary;
+    }
 }
 
 /******************Start of program*********************/
@@ -999,20 +1385,26 @@ Dictionary<string, Topping> toppingDict = InitToppingDict();
 Queue<Order> normalQueue = new Queue<Order>();
 Queue<Order> goldQueue = new Queue<Order>();
 
-//Call to initialise OrderLisst
+//Makes main orderList that stores every order both not fulfilled or  fulfilled
 List<Order> orderList = new List<Order>();
-//Call to initialise data from "orders.csv", and gets the latest order id to be used for creating data 
-int latestId = InitOrder(normalQueue, goldQueue, customerDict, orderList);
 
-//Create a new Dictionary to store the respective order id and final price charged
-Dictionary<int, double> finalPriceDict = InitFinalPrice();
+//Makes list for only fulfilled orders for option 8
+List<Order> fulfilledOrders = new List<Order>();
+
+//Call to initialise data from "orders.csv", and gets the latest order id to be used for creating data 
+int latestId = InitOrder(normalQueue, goldQueue, customerDict, orderList, fulfilledOrders);
+
+//Makes final price dictionary to store orders and its respective cost
+Dictionary<int, double> finalPriceDictionary = FillFinalPriceDict(fulfilledOrders);
 
 while (true)
 {
     int option = DisplayMenu(); //call the menu, and get back the int option
     if (option == 0)
     {
-        UpdateCSVData(customerDict, finalPriceDict);
+        UpdateCustomerCSVData(customerDict);
+        UpdateOrderCSV(fulfilledOrders, customerDict);
+        FillFinalPriceCSVData(finalPriceDictionary);
         break; //ends the program for input 0
     }
     else if (option == 1)
@@ -1021,7 +1413,7 @@ while (true)
     }
     else if (option == 2)
     {
-        DisplayQueues(goldQueue, normalQueue); 
+        DisplayQueues(goldQueue, normalQueue);
     }
     else if (option == 3)
     {
@@ -1029,8 +1421,8 @@ while (true)
     }
     else if (option == 4)
     {
-        ListAllCustomer(customerDict); 
-        
+        ListAllCustomer(customerDict);
+
         latestId = CreateCustomerOrder(customerDict, icecreamOption, flavourDict, toppingDict, normalQueue, goldQueue, latestId, orderList); //updates latestId too
     }
     else if (option == 5)
@@ -1057,22 +1449,51 @@ while (true)
                 continue;
             }
             catch (Exception ex) { Console.WriteLine(ex.Message); continue; }
-            
+
         }
     }
     else if (option == 6)
     {
-
+        ModifyingCurrentOrder(customerDict, flavourDict, toppingDict, icecreamOption);
     }
     else if (option == 7)
     {
         if (goldQueue.Count > 0) //check for any VIP customers to process first
         {
-            ProcessAndCheckOut(goldQueue, customerDict, orderList, finalPriceDict); //pass in goldqueue first 
+            ProcessAndCheckOut(goldQueue, customerDict, orderList, finalPriceDictionary, fulfilledOrders); //pass in goldqueue first 
         }
         else
         {
-            ProcessAndCheckOut(normalQueue, customerDict, orderList, finalPriceDict); //pass normal queue if no one in golden
+            ProcessAndCheckOut(normalQueue, customerDict, orderList, finalPriceDictionary, fulfilledOrders); //pass normal queue if no one in golden
+        }
+    }
+    else if (option == 8)
+    {
+        while (true)
+        {
+            try
+            {
+                Console.Write("\nEnter the year: ");
+                int year = Convert.ToInt32(Console.ReadLine());
+                double total = 0;
+                Dictionary<string, double> MonthlyDictionary = DisplayMonthlyCharges(orderList, finalPriceDictionary, year);
+                foreach (KeyValuePair<string, double> kvp in MonthlyDictionary)
+                {
+                    total += kvp.Value;
+                    Console.WriteLine(kvp.Key + " " + Convert.ToString(year) + ":    {0,-15}", kvp.Value.ToString("$0.00"));
+                }
+                Console.WriteLine("Total:{0,13}", total.ToString("$0.00"));
+                break;
+            }
+            catch (FormatException ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+
         }
     }
 }

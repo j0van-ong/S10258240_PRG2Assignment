@@ -52,6 +52,7 @@ namespace S10258240_PRG2Assignment
                 return;
             }
             PunchCard++; //+1
+
         }
         public override string ToString()
         {
