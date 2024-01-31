@@ -806,13 +806,10 @@ void ProcessAndCheckOut(Queue<Order> queue, Dictionary<int, Customer> cList, Lis
     //Check for its birthday, get cost
     totalcost = DetermineCostAfterBday(orderToSettle, settleCustomer, totalcost);
 
-    //Checks for completion of punchcard & increment punch card below
-    foreach (IceCream iceCream in orderToSettle.iceCreamList)
-    {
-        settleCustomer.Rewards.Punch(); //increment by 1, and check if reach 10
-    }
+    //Checks for completion of punchcard first, in case they have 10 from prev order
     if (settleCustomer.Rewards.PunchCard == completePunch)
     {
+        settleCustomer.Rewards.Punch(); //this method will check if its 10 at the start and reset
         double deductfree = orderToSettle.iceCreamList[0].CalculatePrice(); //first ice cream in the list ordered
         try
         {
@@ -829,6 +826,15 @@ void ProcessAndCheckOut(Queue<Order> queue, Dictionary<int, Customer> cList, Lis
             Console.WriteLine(e.Message);
             settleCustomer.Rewards.PunchCard = 10; //CHANGE BACK TO 10
             totalcost += deductfree; //add back cost
+        }
+    }
+    //reset & increment punch card below
+    foreach (IceCream iceCream in orderToSettle.iceCreamList)
+    {
+        settleCustomer.Rewards.Punch(); //increment by 1, and check if reach 10 then stop
+        if (settleCustomer.Rewards.PunchCard == completePunch) //reaches 10 by incrementing, then fix to 10 and break to prevent going in the method again and get resetted
+        {
+            break;
         }
     }
 

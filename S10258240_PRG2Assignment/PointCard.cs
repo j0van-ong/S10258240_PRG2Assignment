@@ -46,12 +46,12 @@ namespace S10258240_PRG2Assignment
         public void Punch() 
         {
             int max = 10;
-            if (PunchCard == max) //already 10 at the start, so dont need to increment
+            if (PunchCard == max) //already 10 at the start, so dont need to increment and reset
             {
-                return; 
+                PunchCard = 0;
+                return;
             }
             PunchCard++; //+1
-
         }
         public override string ToString()
         {
